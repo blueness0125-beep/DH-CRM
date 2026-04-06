@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { GlobalSearch } from "@/components/shared/global-search"
 import { cn } from "@/lib/utils"
 import { Menu, LogOut, User as UserIcon, LayoutDashboard, Users, Car, Settings } from "lucide-react"
 import type { User } from "@supabase/supabase-js"
@@ -35,7 +36,7 @@ export function AdminHeader({ user }: { user: User }) {
   }
 
   return (
-    <header className="flex h-14 items-center justify-between border-b bg-card px-4">
+    <header className="flex h-14 items-center justify-between border-b bg-card px-4 gap-3">
       <div className="flex items-center gap-3">
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger className="md:hidden inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground h-9 w-9">
@@ -70,6 +71,10 @@ export function AdminHeader({ user }: { user: User }) {
           </SheetContent>
         </Sheet>
         <span className="text-lg font-bold text-primary md:hidden">동행지사</span>
+      </div>
+
+      <div className="flex-1">
+        <GlobalSearch />
       </div>
 
       <DropdownMenu>
