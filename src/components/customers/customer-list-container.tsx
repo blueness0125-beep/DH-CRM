@@ -24,7 +24,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Search, ChevronLeft, ChevronRight, Trash2, Pencil } from "lucide-react"
+import { Plus, Search, ChevronLeft, ChevronRight, Trash2, Pencil, Upload, Download } from "lucide-react"
 import { formatPhone, formatDate, calculateAge } from "@/lib/utils/format"
 import type { Customer } from "@/types/customer"
 import { toast } from "sonner"
@@ -106,12 +106,32 @@ export function CustomerListContainer() {
     <div className="space-y-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">고객 관리</h1>
-        <Link href="/admin/customers/new">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            고객 등록
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const params = new URLSearchParams()
+              if (searchQuery) params.set("query", searchQuery)
+              window.location.href = `/api/customers/export?${params}`
+            }}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            엑셀 내보내기
           </Button>
-        </Link>
+          <Link href="/admin/customers/import">
+            <Button variant="outline" size="sm">
+              <Upload className="mr-2 h-4 w-4" />
+              엑셀 임포트
+            </Button>
+          </Link>
+          <Link href="/admin/customers/new">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              고객 등록
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <form onSubmit={handleSearch} className="flex gap-2">
