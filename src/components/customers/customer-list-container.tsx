@@ -53,13 +53,20 @@ export function CustomerListContainer() {
       if (searchQuery) params.set("query", searchQuery)
 
       const res = await fetch(`/api/customers?${params}`)
+      if (res.status === 401) {
+        router.push("/login")
+        return
+      }
       const json = await res.json()
       if (res.ok) {
         setCustomers(json.data)
         setTotal(json.total)
+      } else {
+        toast.error("고객 목록을 불러오지 못했습니다")
       }
     } catch (error) {
       console.error("Failed to fetch customers:", error)
+      toast.error("고객 목록을 불러오지 못했습니다")
     } finally {
       setLoading(false)
     }

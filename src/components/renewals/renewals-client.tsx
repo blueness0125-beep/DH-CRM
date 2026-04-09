@@ -68,8 +68,11 @@ export function RenewalsClient() {
     const params = new URLSearchParams({ year: String(year) })
     if (selectedMonth) params.set("month", String(selectedMonth))
     fetch(`/api/renewals?${params}`)
-      .then((r) => r.json())
-      .then((json) => setData(json.data ?? []))
+      .then((r) => {
+        if (r.status === 401) { window.location.href = "/login"; return null }
+        return r.json()
+      })
+      .then((json) => { if (json) setData(json.data ?? []) })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [year, selectedMonth])
