@@ -16,7 +16,7 @@ import {
   CreditCard,
   Users,
 } from "lucide-react"
-import { formatPhone, formatDate, calculateAge, formatGender, maskSsnBack } from "@/lib/utils/format"
+import { formatPhone, formatDate, calculateAge, formatGender } from "@/lib/utils/format"
 import { FamilyGroupSection } from "@/components/customers/family-group-section"
 import { RelatedPersonsSection } from "@/components/customers/related-persons-section"
 import type { Customer } from "@/types/customer"
@@ -48,22 +48,22 @@ export function CustomerDetail({ customer, familyMembers }: CustomerDetailProps)
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => router.push("/admin/customers")}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-3">
+          <Button variant="ghost" size="icon" className="shrink-0" onClick={() => router.push("/admin/customers")}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold">{customer.name}</h1>
-            <p className="text-sm text-muted-foreground">
+          <div className="min-w-0">
+            <h1 className="truncate text-2xl font-bold">{customer.name}</h1>
+            <p className="truncate text-sm text-muted-foreground">
               {formatDate(customer.birth_date)}
               {calculateAge(customer.birth_date) != null && ` (${calculateAge(customer.birth_date)}세)`}
               {customer.gender && ` · ${formatGender(customer.gender)}`}
             </p>
           </div>
         </div>
-        <Link href={`/admin/customers/${customer.id}/edit`}>
-          <Button>
+        <Link href={`/admin/customers/${customer.id}/edit`} className="shrink-0">
+          <Button size="sm">
             <Pencil className="mr-2 h-4 w-4" />
             수정
           </Button>
@@ -117,7 +117,7 @@ export function CustomerDetail({ customer, familyMembers }: CustomerDetailProps)
           <CardContent className="space-y-1">
             <InfoRow label="생년월일" value={formatDate(customer.birth_date)} />
             <InfoRow label="성별" value={formatGender(customer.gender)} />
-            <InfoRow label="주민번호 뒷자리" value={maskSsnBack(customer.ssn_back)} />
+            <InfoRow label="주민번호 뒷자리" value={customer.ssn_back ?? ""} />
           </CardContent>
         </Card>
 
