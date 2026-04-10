@@ -14,7 +14,13 @@ export default async function EditCustomerPage({
 
   try {
     const customer = await service.getCustomerById(id)
-    return <CustomerForm customer={customer} mode="edit" />
+
+    let familyMembers = null
+    if (customer.family_group_id) {
+      familyMembers = await service.getFamilyMembers(customer.family_group_id)
+    }
+
+    return <CustomerForm customer={customer} mode="edit" familyMembers={familyMembers ?? []} />
   } catch {
     notFound()
   }
