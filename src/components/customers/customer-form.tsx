@@ -13,6 +13,8 @@ import { Separator } from "@/components/ui/separator"
 import { ArrowLeft, Save, Loader2, Search } from "lucide-react"
 import { AddressSearchButton, type AddressResult } from "@/components/shared/address-search-dialog"
 import { OccupationSearchDialog } from "@/components/shared/occupation-search-dialog"
+import { FamilyGroupSection } from "@/components/customers/family-group-section"
+import { RelatedPersonsSection } from "@/components/customers/related-persons-section"
 import { customerCreateSchema, type CustomerCreate } from "@/lib/validators/customer-schema"
 import type { Occupation } from "@/lib/data/occupations"
 import type { Customer } from "@/types/customer"
@@ -21,9 +23,10 @@ import { toast } from "sonner"
 type CustomerFormProps = {
   customer?: Customer
   mode: "create" | "edit"
+  familyMembers?: Customer[]
 }
 
-export function CustomerForm({ customer, mode }: CustomerFormProps) {
+export function CustomerForm({ customer, mode, familyMembers = [] }: CustomerFormProps) {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
 
@@ -277,6 +280,22 @@ export function CustomerForm({ customer, mode }: CustomerFormProps) {
           </Button>
         </div>
       </form>
+
+      {/* Family & Relationships - edit mode only */}
+      {mode === "edit" && customer && (
+        <>
+          <Separator />
+          <FamilyGroupSection customer={customer} familyMembers={familyMembers} />
+          <RelatedPersonsSection customerId={customer.id} />
+        </>
+      )}
+
+      {/* Create mode: guide message */}
+      {mode === "create" && (
+        <p className="text-center text-sm text-muted-foreground">
+          저장 후 고객 상세 화면에서 가족 구성원 및 관계인을 설정할 수 있습니다.
+        </p>
+      )}
     </div>
   )
 }
