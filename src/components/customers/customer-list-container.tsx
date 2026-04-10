@@ -111,12 +111,13 @@ export function CustomerListContainer() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">고객 관리</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             size="sm"
+            className="hidden sm:flex"
             onClick={() => {
               const params = new URLSearchParams()
               if (searchQuery) params.set("query", searchQuery)
@@ -126,14 +127,14 @@ export function CustomerListContainer() {
             <Download className="mr-2 h-4 w-4" />
             엑셀 내보내기
           </Button>
-          <Link href="/admin/customers/import">
+          <Link href="/admin/customers/import" className="hidden sm:block">
             <Button variant="outline" size="sm">
               <Upload className="mr-2 h-4 w-4" />
               엑셀 임포트
             </Button>
           </Link>
           <Link href="/admin/customers/new">
-            <Button>
+            <Button size="sm">
               <Plus className="mr-2 h-4 w-4" />
               고객 등록
             </Button>
@@ -251,18 +252,21 @@ export function CustomerListContainer() {
               href={`/admin/customers/${customer.id}`}
               className="block rounded-lg border p-4 transition-colors hover:bg-muted/50"
             >
-              <div className="flex items-start justify-between">
-                <div>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
                   <p className="font-medium">{customer.name}</p>
                   <p className="text-sm text-muted-foreground">
                     {formatDate(customer.birth_date)}
                     {calculateAge(customer.birth_date) != null && ` (${calculateAge(customer.birth_date)}세)`}
                   </p>
+                  {customer.phone && (
+                    <p className="text-sm text-muted-foreground">{formatPhone(customer.phone)}</p>
+                  )}
                 </div>
                 {customer.phone && (
                   <a
                     href={`tel:${customer.phone}`}
-                    className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
+                    className="shrink-0 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
                     onClick={(e) => e.stopPropagation()}
                   >
                     전화
