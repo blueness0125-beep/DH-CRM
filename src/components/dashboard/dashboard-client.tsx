@@ -17,7 +17,7 @@ import {
   Gift,
   Car,
 } from "lucide-react"
-import { formatPhone } from "@/lib/utils/format"
+import { formatPhone, formatMonthDay } from "@/lib/utils/format"
 
 type UpcomingBirthday = {
   id: string
@@ -390,7 +390,7 @@ function BirthdayRow({
         {customer.car_renewal_date ? (
           <div>
             <span className="block font-medium text-slate-700 w-full truncate">차량갱신일</span>
-            <span className="block mt-0.5">{customer.car_renewal_date}</span>
+            <span className="block mt-0.5">{formatMonthDay(customer.car_renewal_date)}</span>
           </div>
         ) : (
           <div className="flex items-center justify-end h-full">
