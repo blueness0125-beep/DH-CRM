@@ -15,6 +15,7 @@ import {
   Upload,
   TrendingUp,
   Gift,
+  Car,
 } from "lucide-react"
 import { formatPhone } from "@/lib/utils/format"
 
@@ -24,13 +25,14 @@ type UpcomingBirthday = {
   birth_date: string
   phone: string | null
   gender: string | null
+  car_renewal_date?: string | null
 }
 
 type DashboardStats = {
   totalCustomers: number
-  birthdayThisMonth: number
+  sangryungilThisMonth: number
   upcomingBirthdays: UpcomingBirthday[]
-  recentCount: number
+  carRenewal45Count: number
 }
 
 function daysUntilBirthday(birthDate: string): number {
@@ -130,12 +132,14 @@ export function DashboardClient() {
           suffix="명"
         />
         <KpiCard
-          title="이번 달 생일"
-          value={stats?.birthdayThisMonth}
+          title="이번 달 상령일 고객"
+          value={stats?.sangryungilThisMonth}
           loading={loading}
           icon={<Cake className="h-5 w-5 text-pink-600" />}
           iconBg="bg-pink-50"
           suffix="명"
+          href="/admin/customers/sangryungil"
+          actionText="목록보기"
         />
         <KpiCard
           title="14일 내 생일"
@@ -147,13 +151,14 @@ export function DashboardClient() {
           highlight={!!stats?.upcomingBirthdays.length}
         />
         <KpiCard
-          title="최근 7일 신규"
-          value={stats?.recentCount}
+          title="자동차보험 갱신 (45일 내)"
+          value={stats?.carRenewal45Count}
           loading={loading}
-          icon={<TrendingUp className="h-5 w-5 text-emerald-600" />}
+          icon={<Car className="h-5 w-5 text-emerald-600" />}
           iconBg="bg-emerald-50"
           suffix="명"
-          href="/admin/customers"
+          href="/admin/renewals?filter=upcoming45"
+          actionText="목록보기"
         />
       </div>
 
@@ -249,8 +254,8 @@ export function DashboardClient() {
             </h2>
             <div className="space-y-3">
               <SummaryRow
-                label="이번 달 생일"
-                value={loading ? null : stats?.birthdayThisMonth ?? 0}
+                label="이번 달 상령일 고객"
+                value={loading ? null : stats?.sangryungilThisMonth ?? 0}
                 unit="명"
                 color="text-pink-600"
               />
@@ -285,6 +290,7 @@ function KpiCard({
   href,
   suffix = "",
   highlight = false,
+  actionText,
 }: {
   title: string
   value?: number
@@ -294,6 +300,7 @@ function KpiCard({
   href?: string
   suffix?: string
   highlight?: boolean
+  actionText?: string
 }) {
   const inner = (
     <div
@@ -321,7 +328,7 @@ function KpiCard({
       </div>
       {href && (
         <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
-          <span>보러가기</span>
+          <span>{actionText ?? "보러가기"}</span>
           <ArrowRight className="h-3 w-3" />
         </div>
       )}
@@ -377,6 +384,20 @@ function BirthdayRow({
       ) : (
         <div className="w-8 shrink-0" />
       )}
+
+      {/* 갱신일 (Fixed width for layout stability) */}
+      <div className="w-24 shrink-0 text-right text-xs text-muted-foreground border-l border-dashed pl-2">
+        {customer.car_renewal_date ? (
+          <div>
+            <span className="block font-medium text-slate-700 w-full truncate">차량갱신일</span>
+            <span className="block mt-0.5">{customer.car_renewal_date}</span>
+          </div>
+        ) : (
+          <div className="flex items-center justify-end h-full">
+            <span>-</span>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
