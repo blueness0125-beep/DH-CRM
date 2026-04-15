@@ -17,6 +17,15 @@ export function formatDate(dateStr: string | null | undefined): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
 }
 
+export function formatMonthDay(dateStr: string | null | undefined): string {
+  if (!dateStr) return ""
+  // If it's already MM-DD or M-D format, return as is (some DBs store partial dates)
+  if (/^\d{1,2}-\d{1,2}$/.test(dateStr)) return dateStr
+  const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return dateStr
+  return `${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+}
+
 export function calculateAge(birthDate: string | null | undefined): number | null {
   if (!birthDate) return null
   const birth = new Date(birthDate)

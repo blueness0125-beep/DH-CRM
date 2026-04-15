@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Search, ChevronLeft, ChevronRight, Trash2, Pencil, Upload, Download, Loader2 } from "lucide-react"
-import { formatPhone, formatDate, calculateAge } from "@/lib/utils/format"
+import { formatPhone, formatDate, calculateAge, formatMonthDay } from "@/lib/utils/format"
 import type { Customer } from "@/types/customer"
 import { useDebounce } from "@/hooks/use-debounce"
 import { toast } from "sonner"
@@ -70,7 +70,7 @@ export function CustomerListContainer() {
       const params = new URLSearchParams({
         page: String(page),
         limit: String(limit),
-        sort: "name",
+        sort: "birth_date",
         order: "asc",
       })
       if (urlQuery) params.set("query", urlQuery)
@@ -233,9 +233,11 @@ export function CustomerListContainer() {
                   <TableCell>{calculateAge(customer.birth_date) ?? "-"}</TableCell>
                   <TableCell>
                     {customer.gender && (
-                      <Badge variant={customer.gender === "M" ? "default" : "secondary"}>
-                        {customer.gender === "M" ? "남" : "여"}
-                      </Badge>
+                      customer.gender === "M" ? (
+                        <Badge variant="default">남</Badge>
+                      ) : (
+                        <Badge style={{ backgroundColor: "#fce4ec", color: "#c2185b", border: "1px solid #f48fb1" }}>여</Badge>
+                      )
                     )}
                   </TableCell>
                   <TableCell>{formatPhone(customer.phone)}</TableCell>
@@ -243,7 +245,7 @@ export function CustomerListContainer() {
                     {((customer as any).car_insurances?.[0]?.insurance_company) || "-"}
                   </TableCell>
                   <TableCell>
-                    {((customer as any).car_insurances?.[0]?.expiry_date) || "-"}
+                    {formatMonthDay((customer as any).car_insurances?.[0]?.expiry_date) || "-"}
                   </TableCell>
                   <TableCell className="max-w-xs truncate">
                     {customer.home_address ?? "-"}
