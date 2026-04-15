@@ -11,7 +11,7 @@ export class CustomerRepository {
 
     let queryBuilder = this.supabase
       .from("customers")
-      .select("*", { count: "exact" })
+      .select("*, car_insurances(car_number, insurance_company, expiry_date)", { count: "exact" })
 
     if (query) {
       queryBuilder = queryBuilder.or(
@@ -30,7 +30,7 @@ export class CustomerRepository {
   async findById(id: string) {
     const { data, error } = await this.supabase
       .from("customers")
-      .select("*")
+      .select("*, car_insurances(*)")
       .eq("id", id)
       .single()
 

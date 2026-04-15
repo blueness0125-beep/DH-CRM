@@ -200,6 +200,8 @@ export function CustomerListContainer() {
               <TableHead className="w-16">나이</TableHead>
               <TableHead className="w-16">성별</TableHead>
               <TableHead className="w-36">전화번호</TableHead>
+              <TableHead className="w-28">자동차보험</TableHead>
+              <TableHead className="w-32">차량 갱신일</TableHead>
               <TableHead>주소</TableHead>
               <TableHead className="w-24 text-right">관리</TableHead>
             </TableRow>
@@ -208,14 +210,14 @@ export function CustomerListContainer() {
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell colSpan={7} className="h-12">
+                  <TableCell colSpan={9} className="h-12">
                     <div className="h-4 w-full animate-pulse rounded bg-muted" />
                   </TableCell>
                 </TableRow>
               ))
             ) : customers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
                   {urlQuery ? "검색 결과가 없습니다" : "등록된 고객이 없습니다"}
                 </TableCell>
               </TableRow>
@@ -237,6 +239,12 @@ export function CustomerListContainer() {
                     )}
                   </TableCell>
                   <TableCell>{formatPhone(customer.phone)}</TableCell>
+                  <TableCell>
+                    {((customer as any).car_insurances?.[0]?.insurance_company) || "-"}
+                  </TableCell>
+                  <TableCell>
+                    {((customer as any).car_insurances?.[0]?.expiry_date) || "-"}
+                  </TableCell>
                   <TableCell className="max-w-xs truncate">
                     {customer.home_address ?? "-"}
                   </TableCell>
@@ -290,6 +298,11 @@ export function CustomerListContainer() {
                   </p>
                   {customer.phone && (
                     <p className="text-sm text-muted-foreground">{formatPhone(customer.phone)}</p>
+                  )}
+                  {((customer as any).car_insurances?.[0]?.expiry_date) && (
+                    <p className="text-xs text-slate-500 mt-1">
+                      <span className="font-medium">차량갱신:</span> {((customer as any).car_insurances?.[0]?.expiry_date)}
+                    </p>
                   )}
                 </div>
                 {customer.phone && (
