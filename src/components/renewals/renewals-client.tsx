@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useSearchParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -38,15 +39,21 @@ function urgencyBadge(expiryDate: string) {
 }
 
 export function RenewalsClient() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const filter = searchParams.get("filter")
+  const isUpcoming45 = filter === "upcoming45"
+
   const today = new Date()
   const [year, setYear] = useState(today.getFullYear())
-  const [selectedMonth, setSelectedMonth] = useState<number | null>(today.getMonth() + 1)
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(isUpcoming45 ? null : today.getMonth() + 1)
   const [data, setData] = useState<RenewalItem[]>([])
   const [monthlyCounts, setMonthlyCounts] = useState<number[]>(Array(12).fill(0))
   const [loading, setLoading] = useState(true)
 
-  // 연간 전체 로드 (월별 카운트용)
+  // 연간 전체 로드 (월별 카운트용 - upcoming45일 경우 스킵)
   useEffect(() => {
+    if (isUpcoming45) return
     const params = new URLSearchParams({ year: String(year) })
     fetch(`/api/renewals?${params}`)
       .then((r) => r.json())
@@ -62,12 +69,18 @@ export function RenewalsClient() {
       .catch(() => {})
   }, [year])
 
-  // 선택된 월 로드
+  // 선택된 월 또는 45일 필터 로드
   useEffect(() => {
     setLoading(true)
-    const params = new URLSearchParams({ year: String(year) })
-    if (selectedMonth) params.set("month", String(selectedMonth))
-    fetch(`/api/renewals?${params}`)
+    const params = new URLSearchParams()
+    if (isUpcoming45) {
+      params.set("filter", "upcoming45")
+    } else {
+      params.set("year", String(year))
+      if (selectedMonth) params.set("month", String(selectedMonth))
+    }
+    
+    fetch(`/api/renewals?${params.toString()}`)
       .then((r) => {
         if (r.status === 401) { window.location.href = "/login"; return null }
         return r.json()
@@ -75,59 +88,75 @@ export function RenewalsClient() {
       .then((json) => { if (json) setData(json.data ?? []) })
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [year, selectedMonth])
+  }, [year, selectedMonth, isUpcoming45])
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">갱신 관리</h1>
-
-      {/* 연도 선택 */}
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="icon" onClick={() => setYear((y) => y - 1)}>
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        <span className="text-lg font-semibold w-16 text-center">{year}년</span>
-        <Button variant="outline" size="icon" onClick={() => setYear((y) => y + 1)}>
-          <ChevronRight className="h-4 w-4" />
-        </Button>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between">
+        <h1 className="text-2xl font-bold">
+          {isUpcoming45 ? "자동차보험 갱신 (45일 내)" : "갱신 관리"}
+        </h1>
+        {isUpcoming45 && (
+          <Button variant="outline" size="sm" onClick={() => router.push('/admin/renewals')}>
+            전체 갱신 관리 보기
+          </Button>
+        )}
       </div>
 
-      {/* 월별 캘린더 그리드 */}
-      <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-12">
-        {MONTHS.map((label, idx) => {
-          const m = idx + 1
-          const count = monthlyCounts[idx]
-          const isSelected = selectedMonth === m
-          const isCurrent = year === today.getFullYear() && m === today.getMonth() + 1
-          return (
-            <button
-              key={m}
-              onClick={() => setSelectedMonth(isSelected ? null : m)}
-              className={`relative flex flex-col items-center rounded-lg border p-2 text-sm transition-colors ${
-                isSelected
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : isCurrent
-                  ? "border-primary/50 bg-primary/10"
-                  : "hover:bg-muted"
-              }`}
-            >
-              <span className="font-medium">{label}</span>
-              {count > 0 && (
-                <span className={`text-xs font-bold ${isSelected ? "text-primary-foreground" : "text-primary"}`}>
-                  {count}건
-                </span>
-              )}
-            </button>
-          )
-        })}
-      </div>
+      {/* 연도 선택 및 월별 캘린더 (upcoming45 모드에서는 숨김) */}
+      {!isUpcoming45 && (
+        <>
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="icon" onClick={() => setYear((y) => y - 1)}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-lg font-semibold w-16 text-center">{year}년</span>
+            <Button variant="outline" size="icon" onClick={() => setYear((y) => y + 1)}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-12">
+            {MONTHS.map((label, idx) => {
+              const m = idx + 1
+              const count = monthlyCounts[idx]
+              const isSelected = selectedMonth === m
+              const isCurrent = year === today.getFullYear() && m === today.getMonth() + 1
+              return (
+                <button
+                  key={m}
+                  onClick={() => setSelectedMonth(isSelected ? null : m)}
+                  className={`relative flex flex-col items-center rounded-lg border p-2 text-sm transition-colors ${
+                    isSelected
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : isCurrent
+                      ? "border-primary/50 bg-primary/10"
+                      : "hover:bg-muted"
+                  }`}
+                >
+                  <span className="font-medium">{label}</span>
+                  {count > 0 && (
+                    <span className={`text-xs font-bold ${isSelected ? "text-primary-foreground" : "text-primary"}`}>
+                      {count}건
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </>
+      )}
 
       {/* 목록 */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <Car className="h-4 w-4" />
-            {selectedMonth ? `${year}년 ${selectedMonth}월 갱신 예정` : `${year}년 전체`}
+            {isUpcoming45 
+              ? "오늘부터 45일 내 갱신 대상" 
+              : selectedMonth 
+                ? `${year}년 ${selectedMonth}월 갱신 예정` 
+                : `${year}년 전체`}
             {!loading && <Badge variant="outline" className="ml-auto">{data.length}건</Badge>}
           </CardTitle>
         </CardHeader>

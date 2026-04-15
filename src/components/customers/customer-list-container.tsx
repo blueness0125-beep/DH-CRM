@@ -24,22 +24,45 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Search, ChevronLeft, ChevronRight, Trash2, Pencil, Upload, Download } from "lucide-react"
+import { Plus, Search, ChevronLeft, ChevronRight, Trash2, Pencil, Upload, Download, Loader2 } from "lucide-react"
 import { formatPhone, formatDate, calculateAge } from "@/lib/utils/format"
 import type { Customer } from "@/types/customer"
+import { useDebounce } from "@/hooks/use-debounce"
 import { toast } from "sonner"
 
 export function CustomerListContainer() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const urlQuery = searchParams.get("query") ?? ""
+  
   const [customers, setCustomers] = useState<Customer[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState(searchParams.get("query") ?? "")
+  
+  const [inputValue, setInputValue] = useState(urlQuery)
+  const debouncedQuery = useDebounce(inputValue, 400)
+  const showSpinner = loading || inputValue !== debouncedQuery
+  
   const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null)
 
   const page = Number(searchParams.get("page") ?? "1")
   const limit = 20
+
+  // URL 파라미터가 변경되면 input 값 동기화 (뒤로가기 등)
+  useEffect(() => {
+    setInputValue(urlQuery)
+  }, [urlQuery])
+
+  // 디바운스된 쿼리가 변경되면 라우터 푸시
+  useEffect(() => {
+    if (debouncedQuery !== urlQuery) {
+      const params = new URLSearchParams(searchParams.toString())
+      if (debouncedQuery) params.set("query", debouncedQuery)
+      else params.delete("query")
+      params.set("page", "1")
+      router.push(`/admin/customers?${params.toString()}`)
+    }
+  }, [debouncedQuery, urlQuery, searchParams, router])
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true)
@@ -50,7 +73,7 @@ export function CustomerListContainer() {
         sort: "name",
         order: "asc",
       })
-      if (searchQuery) params.set("query", searchQuery)
+      if (urlQuery) params.set("query", urlQuery)
 
       const res = await fetch(`/api/customers?${params}`)
       if (res.status === 401) {
@@ -70,7 +93,7 @@ export function CustomerListContainer() {
     } finally {
       setLoading(false)
     }
-  }, [page, searchQuery])
+  }, [page, urlQuery, router])
 
   useEffect(() => {
     fetchCustomers()
@@ -78,10 +101,12 @@ export function CustomerListContainer() {
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
-    const params = new URLSearchParams()
-    if (searchQuery) params.set("query", searchQuery)
+    if (inputValue === urlQuery) return
+    const params = new URLSearchParams(searchParams.toString())
+    if (inputValue) params.set("query", inputValue)
+    else params.delete("query")
     params.set("page", "1")
-    router.push(`/admin/customers?${params}`)
+    router.push(`/admin/customers?${params.toString()}`)
   }
 
   function goToPage(newPage: number) {
@@ -120,8 +145,8 @@ export function CustomerListContainer() {
             className="hidden sm:flex"
             onClick={() => {
               const params = new URLSearchParams()
-              if (searchQuery) params.set("query", searchQuery)
-              window.location.href = `/api/customers/export?${params}`
+              if (urlQuery) params.set("query", urlQuery)
+              window.location.href = `/api/customers/export?${params.toString()}`
             }}
           >
             <Download className="mr-2 h-4 w-4" />
@@ -144,11 +169,15 @@ export function CustomerListContainer() {
 
       <form onSubmit={handleSearch} className="flex gap-2">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          {showSpinner ? (
+            <Loader2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground animate-spin" />
+          ) : (
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          )}
           <Input
             placeholder="이름, 전화번호, 주소 검색..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
             className="pl-9"
           />
         </div>
@@ -187,7 +216,7 @@ export function CustomerListContainer() {
             ) : customers.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                  {searchQuery ? "검색 결과가 없습니다" : "등록된 고객이 없습니다"}
+                  {urlQuery ? "검색 결과가 없습니다" : "등록된 고객이 없습니다"}
                 </TableCell>
               </TableRow>
             ) : (
@@ -243,7 +272,7 @@ export function CustomerListContainer() {
           ))
         ) : customers.length === 0 ? (
           <div className="py-12 text-center text-muted-foreground">
-            {searchQuery ? "검색 결과가 없습니다" : "등록된 고객이 없습니다"}
+            {urlQuery ? "검색 결과가 없습니다" : "등록된 고객이 없습니다"}
           </div>
         ) : (
           customers.map((customer) => (
