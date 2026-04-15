@@ -15,6 +15,7 @@ import {
   Briefcase,
   CreditCard,
   Users,
+  Car,
 } from "lucide-react"
 import { formatPhone, formatDate, calculateAge, formatGender } from "@/lib/utils/format"
 import { FamilyGroupSection } from "@/components/customers/family-group-section"
@@ -186,6 +187,34 @@ export function CustomerDetail({ customer, familyMembers }: CustomerDetailProps)
             <InfoRow label="은행" value={customer.bank_name ?? ""} />
             <InfoRow label="계좌번호" value={customer.bank_account ?? ""} />
             <InfoRow label="예금주" value={customer.bank_holder ?? ""} />
+          </CardContent>
+        </Card>
+
+        {/* Car Insurance */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Car className="h-4 w-4" />
+              자동차보험
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            <InfoRow 
+              label="차량번호" 
+              value={((customer as any).car_insurances?.[0]?.car_number) || "미등록"} 
+            />
+            <InfoRow 
+              label="가입 자동차보험 (보험사명 등)" 
+              value={((customer as any).car_insurances?.[0]?.insurance_company) || "미등록"} 
+            />
+            <InfoRow 
+              label="가입일 (연-월-일)" 
+              value="미등록" 
+            />
+            <InfoRow 
+              label="갱신일 (월-일)" 
+              value={((customer as any).car_insurances?.[0]?.expiry_date) || "미등록"} 
+            />
           </CardContent>
         </Card>
 
