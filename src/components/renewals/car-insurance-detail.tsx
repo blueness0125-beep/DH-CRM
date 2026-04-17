@@ -113,7 +113,7 @@ export function CarInsuranceDetail({ entry, onContractSaved }: Props) {
       {/* 상태 & 메모 */}
       <section className="rounded-lg border bg-background p-4 space-y-3">
         <SectionTitle>상태 및 메모</SectionTitle>
-        <Select value={editState} onValueChange={setEditState}>
+        <Select value={editState} onValueChange={(v) => setEditState(v ?? "")}>
           <SelectTrigger className="w-36 h-8 text-sm">
             <SelectValue placeholder="상태 선택" />
           </SelectTrigger>
