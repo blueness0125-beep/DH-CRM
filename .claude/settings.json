@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "asyncRewake": true,
+            "statusMessage": "작업 이력 확인 중...",
+            "command": "cd \"/Users/joongkyoung/Desktop/develop/보험 고객 관리_동행지사\" && unstaged=$(git diff --name-only 2>/dev/null | grep -E \"\\.(ts|tsx|js|jsx|sql)$\") && staged=$(git diff --cached --name-only 2>/dev/null | grep -E \"\\.(ts|tsx|js|jsx|sql)$\") && if [ -n \"$unstaged\" ] || [ -n \"$staged\" ]; then echo \"코드 변경이 있지만 아직 커밋되지 않았습니다. 작업 이력.md를 업데이트하고 커밋해주세요.\"; exit 2; fi && last=$(git diff HEAD~1 HEAD --name-only 2>/dev/null) && code=$(echo \"$last\" | grep -E \"\\.(ts|tsx|js|jsx|sql)$\") && hist=$(echo \"$last\" | grep \"작업 이력\") && if [ -n \"$code\" ] && [ -z \"$hist\" ]; then echo \"마지막 커밋에 코드 변경이 있지만 작업 이력.md가 업데이트되지 않았습니다. 지금 바로 작업 이력.md를 업데이트하고 커밋해주세요.\"; exit 2; fi && exit 0"
+          }
+        ]
+      }
+    ]
+  }
+}
