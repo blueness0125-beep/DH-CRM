@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -31,16 +30,33 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 function Lightbox({ src, onClose }: { src: string | null; onClose: () => void }) {
   if (!src) return null
   return (
-    <Dialog open onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-auto p-2 bg-black/90 flex items-start justify-start">
-        {isImageUrl(src) ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={src} alt="확대 보기" className="w-auto h-auto max-w-none block" />
-        ) : (
-          <iframe src={src} title="문서 보기" className="w-[88vw] h-[88vh] border-0" />
-        )}
-      </DialogContent>
-    </Dialog>
+    <div
+      className="fixed inset-0 z-50 bg-black/90 overflow-auto flex items-start justify-start p-4"
+      onClick={onClose}
+    >
+      <button
+        className="fixed top-4 right-4 text-white bg-black/60 rounded-full w-8 h-8 flex items-center justify-center text-lg leading-none z-10"
+        onClick={onClose}
+      >
+        ✕
+      </button>
+      {isImageUrl(src) ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={src}
+          alt="확대 보기"
+          className="block h-auto max-w-none"
+          onClick={(e) => e.stopPropagation()}
+        />
+      ) : (
+        <iframe
+          src={src}
+          title="문서 보기"
+          className="w-[88vw] h-[88vh] border-0"
+          onClick={(e) => e.stopPropagation()}
+        />
+      )}
+    </div>
   )
 }
 
@@ -55,7 +71,7 @@ function MediaGrid({ urls, onClickImage }: { urls: string[]; onClickImage: (src:
             key={i}
             src={url}
             alt={`이미지 ${i + 1}`}
-            className="w-full h-auto cursor-zoom-in rounded border block"
+            className="max-w-full h-auto cursor-zoom-in rounded border block"
             onClick={() => onClickImage(url)}
           />
         ) : (

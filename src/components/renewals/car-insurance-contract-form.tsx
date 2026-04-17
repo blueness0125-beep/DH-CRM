@@ -8,6 +8,11 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { CarInsuranceEntry } from "@/app/api/renewals/car-insurance/route"
 
+function parseVehicleNumbers(차량정보: string | null): string[] {
+  if (!차량정보) return []
+  return [...차량정보.matchAll(/차량번호[:\s]+(.+)/g)].map((m) => m[1].trim()).filter(Boolean)
+}
+
 const 보험사_목록 = ["삼성화재", "KB손해보험", "DB손해보험", "현대해상"]
 const 채널_목록 = ["씨엠", "다이렉트", "TM라인", "오프라인"]
 const 설계자_목록 = ["송상훈", "이중경"]
@@ -32,6 +37,7 @@ type Props = {
 }
 
 export function CarInsuranceContractForm({ entry, open, onOpenChange, onSaved }: Props) {
+  const vehicleNumbers = parseVehicleNumbers(entry?.차량정보 ?? null)
   const [form, setForm] = useState({
     계약일: todayStr(),
     보험사: "삼성화재",
@@ -56,7 +62,7 @@ export function CarInsuranceContractForm({ entry, open, onOpenChange, onSaved }:
       보험사: entry.보험사 ?? "삼성화재",
       채널: entry.채널 ?? "씨엠",
       가입보험료: entry.가입보험료 != null ? String(entry.가입보험료) : "",
-      차량번호: entry.차량번호 ?? "",
+      차량번호: entry.차량번호 ?? (vehicleNumbers.length > 0 ? "" : ""),
       증권번호: entry.증권번호 ?? "",
       시작일,
       만기일: entry.만기일 ?? addOneYear(시작일),
@@ -155,7 +161,20 @@ export function CarInsuranceContractForm({ entry, open, onOpenChange, onSaved }:
           </Field>
 
           <Field label="차량번호">
-            <Input placeholder="예) 12가3456" value={form.차량번호} onChange={(e) => set("차량번호", e.target.value)} />
+            {vehicleNumbers.length > 0 ? (
+              <Select value={form.차량번호} onValueChange={(v) => set("차량번호", v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="차량을 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  {vehicleNumbers.map((번호) => (
+                    <SelectItem key={번호} value={번호}>{번호}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input placeholder="예) 12가3456" value={form.차량번호} onChange={(e) => set("차량번호", e.target.value)} />
+            )}
           </Field>
 
           <Field label="증권번호">
