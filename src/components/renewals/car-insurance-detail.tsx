@@ -4,8 +4,12 @@ import { useState } from "react"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import { CarInsuranceContractForm } from "./car-insurance-contract-form"
 import type { CarInsuranceEntry } from "@/app/api/renewals/car-insurance/route"
+
+const 상태_목록 = ["상담 대기", "진행중", "보류", "완료", "취소"]
 
 function parseUrls(raw: string | null): string[] {
   if (!raw) return []
@@ -16,36 +20,34 @@ function isImageUrl(url: string): boolean {
   return /\.(jpe?g|png|webp|gif|bmp)(\?|$)/i.test(url)
 }
 
-type LightboxProps = {
-  src: string | null
-  onClose: () => void
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 className="text-sm font-bold text-foreground border-l-[3px] border-primary pl-2 leading-tight">
+      {children}
+    </h3>
+  )
 }
 
-function Lightbox({ src, onClose }: LightboxProps) {
+function Lightbox({ src, onClose }: { src: string | null; onClose: () => void }) {
   if (!src) return null
   return (
     <Dialog open onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] p-2 flex items-center justify-center bg-black/90">
+      <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-auto p-2 bg-black/90 flex items-start justify-start">
         {isImageUrl(src) ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={src} alt="확대 보기" className="max-w-full max-h-[90vh] object-contain" />
+          <img src={src} alt="확대 보기" className="w-auto h-auto max-w-none block" />
         ) : (
-          <iframe src={src} title="문서 보기" className="w-[90vw] h-[90vh] border-0" />
+          <iframe src={src} title="문서 보기" className="w-[88vw] h-[88vh] border-0" />
         )}
       </DialogContent>
     </Dialog>
   )
 }
 
-type MediaGridProps = {
-  urls: string[]
-  onClickImage: (src: string) => void
-}
-
-function MediaGrid({ urls, onClickImage }: MediaGridProps) {
+function MediaGrid({ urls, onClickImage }: { urls: string[]; onClickImage: (src: string) => void }) {
   if (urls.length === 0) return null
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {urls.map((url, i) =>
         isImageUrl(url) ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -53,7 +55,7 @@ function MediaGrid({ urls, onClickImage }: MediaGridProps) {
             key={i}
             src={url}
             alt={`이미지 ${i + 1}`}
-            className="max-w-full max-h-[70vh] object-contain cursor-zoom-in rounded border"
+            className="w-full h-auto cursor-zoom-in rounded border block"
             onClick={() => onClickImage(url)}
           />
         ) : (
@@ -61,8 +63,7 @@ function MediaGrid({ urls, onClickImage }: MediaGridProps) {
             key={i}
             src={url}
             title={`문서 ${i + 1}`}
-            className="w-full h-[60vh] border rounded cursor-pointer"
-            onClick={() => onClickImage(url)}
+            className="w-full h-[60vh] border rounded"
           />
         )
       )}
@@ -78,61 +79,109 @@ type Props = {
 export function CarInsuranceDetail({ entry, onContractSaved }: Props) {
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
   const [contractOpen, setContractOpen] = useState(false)
+  const [editState, setEditState] = useState(entry.상태 ?? "")
+  const [editMemo, setEditMemo] = useState(entry.메모 ?? "")
+  const [saving, setSaving] = useState(false)
 
   const 가입정보 = parseUrls(entry.가입정보경로)
   const 비교표 = parseUrls(entry.비교표경로)
   const 이미지 = parseUrls(entry.이미지경로)
-
   const hasContract = Boolean(entry.계약일)
+  const stateChanged = editState !== (entry.상태 ?? "") || editMemo !== (entry.메모 ?? "")
+
+  async function saveStatus() {
+    setSaving(true)
+    try {
+      await fetch("/api/renewals/car-insurance/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          등록번호: entry.등록번호,
+          상태: editState || null,
+          메모: editMemo || null,
+        }),
+      })
+      onContractSaved()
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
-    <div className="border-t bg-muted/20 p-4 space-y-5">
+    <div className="border-t bg-muted/20 p-4 space-y-4">
+
+      {/* 상태 & 메모 */}
+      <section className="rounded-lg border bg-background p-4 space-y-3">
+        <SectionTitle>상태 및 메모</SectionTitle>
+        <Select value={editState} onValueChange={setEditState}>
+          <SelectTrigger className="w-36 h-8 text-sm">
+            <SelectValue placeholder="상태 선택" />
+          </SelectTrigger>
+          <SelectContent>
+            {상태_목록.map((v) => (
+              <SelectItem key={v} value={v}>{v}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Textarea
+          placeholder="메모를 입력하세요"
+          value={editMemo}
+          onChange={(e) => setEditMemo(e.target.value)}
+          className="text-sm min-h-[72px] resize-none"
+        />
+        {stateChanged && (
+          <Button size="sm" onClick={saveStatus} disabled={saving}>
+            {saving ? "저장 중..." : "업데이트"}
+          </Button>
+        )}
+      </section>
+
       {/* 차량정보 */}
       {entry.차량정보 && (
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground mb-1">차량정보</p>
+        <section className="rounded-lg border bg-background p-4 space-y-2">
+          <SectionTitle>차량정보</SectionTitle>
           <pre className="text-sm whitespace-pre-wrap font-sans">{entry.차량정보}</pre>
-        </div>
+        </section>
       )}
 
       {/* 비교내용 */}
       {entry.비교내용 && (
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground mb-1">비교내용</p>
+        <section className="rounded-lg border bg-background p-4 space-y-2">
+          <SectionTitle>비교내용</SectionTitle>
           <pre className="text-sm whitespace-pre-wrap font-sans">{entry.비교내용}</pre>
-        </div>
+        </section>
       )}
 
-      {/* 가입정보 이미지 */}
+      {/* 가입정보 */}
       {가입정보.length > 0 && (
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground mb-2">가입정보</p>
+        <section className="rounded-lg border bg-background p-4 space-y-3">
+          <SectionTitle>가입정보</SectionTitle>
           <MediaGrid urls={가입정보} onClickImage={setLightboxSrc} />
-        </div>
+        </section>
       )}
 
       {/* 비교표 */}
       {비교표.length > 0 && (
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground mb-2">비교표</p>
+        <section className="rounded-lg border bg-background p-4 space-y-3">
+          <SectionTitle>비교표</SectionTitle>
           <MediaGrid urls={비교표} onClickImage={setLightboxSrc} />
-        </div>
+        </section>
       )}
 
-      {/* 기타 이미지 */}
+      {/* 가입 보험 목록 */}
       {이미지.length > 0 && (
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground mb-2">이미지</p>
+        <section className="rounded-lg border bg-background p-4 space-y-3">
+          <SectionTitle>가입 보험 목록</SectionTitle>
           <MediaGrid urls={이미지} onClickImage={setLightboxSrc} />
-        </div>
+        </section>
       )}
 
-      {/* 기존 계약 정보 표시 */}
+      {/* 계약 완료 정보 */}
       {hasContract && (
-        <div className="rounded-lg border bg-green-50 p-3 space-y-1">
-          <p className="text-xs font-semibold text-green-700 mb-2">계약 완료</p>
+        <section className="rounded-lg border border-green-200 bg-green-50 p-4 space-y-2">
+          <SectionTitle>계약 완료</SectionTitle>
           <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-            {[
+            {([
               ["계약일", entry.계약일],
               ["보험사", entry.보험사],
               ["채널", entry.채널],
@@ -144,20 +193,20 @@ export function CarInsuranceDetail({ entry, onContractSaved }: Props) {
               ["피보험자", entry.피보험자],
               ["계약자", entry.계약자],
               ["설계자", entry.설계자],
-            ].map(([label, value]) =>
-              value ? (
-                <div key={label as string}>
+            ] as [string, string | number | null][]).map(([label, value]) =>
+              value != null ? (
+                <div key={label}>
                   <span className="text-muted-foreground">{label}: </span>
                   <span className="font-medium">{value}</span>
                 </div>
               ) : null
             )}
           </div>
-        </div>
+        </section>
       )}
 
       {/* 계약 버튼 */}
-      <div className="flex justify-end pt-2 border-t">
+      <div className="flex justify-end pt-1">
         <Button
           size="sm"
           variant={hasContract ? "outline" : "default"}

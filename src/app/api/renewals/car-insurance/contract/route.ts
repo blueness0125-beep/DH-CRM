@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
     const { error } = await supabase
       .from("car_insurance_data")
-      .update(contractData as Record<string, unknown>)
+      .update({ ...contractData, 상태: "완료" } as Record<string, unknown>)
       .eq("등록번호", 등록번호)
 
     if (error) throw error

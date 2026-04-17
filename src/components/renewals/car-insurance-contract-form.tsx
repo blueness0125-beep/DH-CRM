@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -39,8 +39,8 @@ export function CarInsuranceContractForm({ entry, open, onOpenChange, onSaved }:
     가입보험료: "",
     차량번호: "",
     증권번호: "",
-    시작일: "",
-    만기일: "",
+    시작일: todayStr(),
+    만기일: addOneYear(todayStr()),
     피보험자: "",
     계약자: "",
     설계자: "송상훈",
@@ -50,6 +50,7 @@ export function CarInsuranceContractForm({ entry, open, onOpenChange, onSaved }:
 
   useEffect(() => {
     if (!entry) return
+    const 시작일 = entry.시작일 ?? todayStr()
     setForm({
       계약일: entry.계약일 ?? todayStr(),
       보험사: entry.보험사 ?? "삼성화재",
@@ -57,9 +58,9 @@ export function CarInsuranceContractForm({ entry, open, onOpenChange, onSaved }:
       가입보험료: entry.가입보험료 != null ? String(entry.가입보험료) : "",
       차량번호: entry.차량번호 ?? "",
       증권번호: entry.증권번호 ?? "",
-      시작일: entry.시작일 ?? "",
-      만기일: entry.만기일 ?? "",
-      피보험자: entry.피보험자 ?? "",
+      시작일,
+      만기일: entry.만기일 ?? addOneYear(시작일),
+      피보험자: entry.피보험자 ?? entry.고객명 ?? "",
       계약자: entry.계약자 ?? entry.고객명 ?? "",
       설계자: entry.설계자 ?? "송상훈",
     })
@@ -112,16 +113,16 @@ export function CarInsuranceContractForm({ entry, open, onOpenChange, onSaved }:
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>자동차보험 계약 체결</SheetTitle>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>자동차보험 계약 체결</DialogTitle>
           {entry && (
             <p className="text-sm text-muted-foreground">{entry.고객명} · 갱신일 {entry.갱신일}</p>
           )}
-        </SheetHeader>
+        </DialogHeader>
 
-        <div className="mt-6 space-y-4">
+        <div className="space-y-4 pt-2">
           <Field label="계약일">
             <Input type="date" value={form.계약일} onChange={(e) => set("계약일", e.target.value)} />
           </Field>
@@ -197,8 +198,8 @@ export function CarInsuranceContractForm({ entry, open, onOpenChange, onSaved }:
             </Button>
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }
 
