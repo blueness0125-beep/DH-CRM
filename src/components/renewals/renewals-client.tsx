@@ -11,18 +11,20 @@ import { ChevronLeft, ChevronRight, Phone, Car } from "lucide-react"
 import { formatPhone } from "@/lib/utils/format"
 
 type RenewalItem = {
-  id: string
-  car_number: string | null
-  insurance_company: string | null
-  expiry_date: string
-  premium: number | null
-  memo: string | null
+  등록번호: string
+  고객명: string
+  갱신일: string
+  차량정보: string | null
+  연락처: string | null
+  상태: string | null
+  메모: string | null
   customer_id: string
   customers: {
     id: string
     name: string
     phone: string | null
   } | null
+  fullRenewalDate: string
 }
 
 const MONTHS = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"]
@@ -61,8 +63,10 @@ export function RenewalsClient() {
         const items: RenewalItem[] = json.data ?? []
         const counts = Array(12).fill(0)
         items.forEach((item) => {
-          const m = new Date(item.expiry_date).getMonth()
-          counts[m]++
+          if (item.갱신일) {
+            const m = parseInt(item.갱신일.split("-")[0]) - 1
+            counts[m]++
+          }
         })
         setMonthlyCounts(counts)
       })
@@ -173,49 +177,51 @@ export function RenewalsClient() {
             </p>
           ) : (
             <div className="space-y-2">
-              {data.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between rounded-lg border p-3 gap-3"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="flex flex-col gap-0.5 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {item.customers && (
-                          <Link
-                            href={`/admin/customers/${item.customers.id}`}
-                            className="text-sm font-medium hover:underline"
-                          >
-                            {item.customers.name}
-                          </Link>
-                        )}
-                        {item.car_number && (
-                          <span className="text-xs text-muted-foreground">{item.car_number}</span>
-                        )}
-                        {item.insurance_company && (
-                          <Badge variant="secondary" className="text-xs">{item.insurance_company}</Badge>
-                        )}
+              {data.map((item) => {
+                const phone = item.customers?.phone || item.연락처
+                return (
+                  <div
+                    key={item.등록번호}
+                    className="flex items-center justify-between rounded-lg border p-3 gap-3"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {item.customers ? (
+                            <Link
+                              href={`/admin/customers/${item.customers.id}`}
+                              className="text-sm font-medium hover:underline"
+                            >
+                              {item.customers.name}
+                            </Link>
+                          ) : (
+                            <span className="text-sm font-medium">{item.고객명}</span>
+                          )}
+                          {item.상태 && (
+                            <Badge variant="secondary" className="text-xs">{item.상태}</Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          갱신일: {item.갱신일}
+                          {item.차량정보 && ` · ${item.차량정보.split("\n")[0]}`}
+                        </p>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        만기: {item.expiry_date}
-                        {item.premium != null && ` · ${item.premium.toLocaleString()}원`}
-                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {urgencyBadge(item.fullRenewalDate)}
+                      {phone && (
+                        <a href={`tel:${phone}`}>
+                          <Button variant="outline" size="sm" className="h-8">
+                            <Phone className="mr-1 h-3 w-3" />
+                            <span className="hidden sm:inline">{formatPhone(phone)}</span>
+                            <span className="sm:hidden">전화</span>
+                          </Button>
+                        </a>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {urgencyBadge(item.expiry_date)}
-                    {item.customers?.phone && (
-                      <a href={`tel:${item.customers.phone}`}>
-                        <Button variant="outline" size="sm" className="h-8">
-                          <Phone className="mr-1 h-3 w-3" />
-                          <span className="hidden sm:inline">{formatPhone(item.customers.phone)}</span>
-                          <span className="sm:hidden">전화</span>
-                        </Button>
-                      </a>
-                    )}
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </CardContent>

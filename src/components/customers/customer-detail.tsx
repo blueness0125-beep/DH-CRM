@@ -199,22 +199,20 @@ export function CustomerDetail({ customer, familyMembers }: CustomerDetailProps)
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
-            <InfoRow 
-              label="차량번호" 
-              value={((customer as any).car_insurances?.[0]?.car_number) || "미등록"} 
+            <InfoRow
+              label="갱신일 (월-일)"
+              value={((customer as any).car_insurance_data?.[0]?.갱신일) || "미등록"}
             />
-            <InfoRow 
-              label="가입 자동차보험 (보험사명 등)" 
-              value={((customer as any).car_insurances?.[0]?.insurance_company) || "미등록"} 
+            <InfoRow
+              label="상태"
+              value={((customer as any).car_insurance_data?.[0]?.상태) || "미등록"}
             />
-            <InfoRow 
-              label="가입일 (연-월-일)" 
-              value="미등록" 
-            />
-            <InfoRow 
-              label="갱신일 (월-일)" 
-              value={((customer as any).car_insurances?.[0]?.expiry_date) || "미등록"} 
-            />
+            {((customer as any).car_insurance_data?.[0]?.차량정보) && (
+              <div className="py-1">
+                <p className="text-xs text-muted-foreground mb-0.5">차량정보</p>
+                <p className="text-sm whitespace-pre-wrap">{(customer as any).car_insurance_data[0].차량정보}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
