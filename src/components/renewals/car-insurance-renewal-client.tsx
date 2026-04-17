@@ -100,7 +100,7 @@ export function CarInsuranceRenewalClient() {
             <div>
               {data.map((item) => {
                 const isExpanded = expandedId === item.등록번호
-                const phone = item.연락처
+                const phone = item.customers?.phone || item.연락처
                 const hasContract = Boolean(item.계약일)
                 const vehicleSummary = item.차량정보?.split("\n")[0] ?? ""
 
@@ -118,13 +118,13 @@ export function CarInsuranceRenewalClient() {
                       {/* 고객정보 */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          {item.customer_id ? (
+                          {item.customers ? (
                             <Link
-                              href={`/admin/customers/${item.customer_id}`}
+                              href={`/admin/customers/${item.customers.id}`}
                               className="text-sm font-medium hover:underline"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              {item.고객명}
+                              {item.customers.name}
                             </Link>
                           ) : (
                             <span className="text-sm font-medium">{item.고객명}</span>

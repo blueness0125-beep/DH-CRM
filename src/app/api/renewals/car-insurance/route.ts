@@ -25,6 +25,7 @@ export type CarInsuranceEntry = {
   계약자: string | null
   설계자: string | null
   customer_id: string | null
+  customers: { id: string; name: string; phone: string | null } | null
   fullRenewalDate: string
 }
 
@@ -46,7 +47,7 @@ export async function GET(req: NextRequest) {
 
     const { data: raw, error } = await supabase
       .from("car_insurance_data")
-      .select("*")
+      .select("*, customers ( id, name, phone )")
 
     if (error) throw error
 
