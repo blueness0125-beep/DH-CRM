@@ -32,7 +32,7 @@ export type Customer = {
 export type CustomerWithRelations = Customer & {
   family_members?: Customer[]
   relationships?: CustomerRelationship[]
-  car_insurances?: CarInsurance[]
+  car_insurance_data?: CarInsurance[]
   insurance_products?: InsuranceProduct[]
 }
 
@@ -53,15 +53,21 @@ export type CustomerRelationship = {
 }
 
 export type CarInsurance = {
-  id: string
+  등록번호: string
+  고객명: string
+  관계인: string | null
+  생년월일: string | null
+  주민번호뒷자리: string | null
+  갱신일: string | null
+  차량정보: string | null
+  연락처: string | null
+  상태: string | null
+  비교내용: string | null
+  비교표경로: string | null
+  가입정보경로: string | null
+  이미지경로: string | null
+  메모: string | null
   customer_id: string
-  car_number: string | null
-  insurance_company: string | null
-  expiry_date: string | null
-  premium: number | null
-  memo: string | null
-  created_at: string
-  updated_at: string
 }
 
 export type InsuranceProduct = {

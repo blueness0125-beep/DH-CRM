@@ -242,10 +242,10 @@ export function CustomerListContainer() {
                   </TableCell>
                   <TableCell>{formatPhone(customer.phone)}</TableCell>
                   <TableCell>
-                    {((customer as any).car_insurances?.[0]?.insurance_company) || "-"}
+                    {((customer as any).car_insurance_data?.[0]?.차량정보?.split("\n")?.[2]?.replace("가입사: ", "")) || "-"}
                   </TableCell>
                   <TableCell>
-                    {formatMonthDay((customer as any).car_insurances?.[0]?.expiry_date) || "-"}
+                    {formatMonthDay((customer as any).car_insurance_data?.[0]?.갱신일) || "-"}
                   </TableCell>
                   <TableCell className="max-w-xs truncate">
                     {customer.home_address ?? "-"}
@@ -301,9 +301,9 @@ export function CustomerListContainer() {
                   {customer.phone && (
                     <p className="text-sm text-muted-foreground">{formatPhone(customer.phone)}</p>
                   )}
-                  {((customer as any).car_insurances?.[0]?.expiry_date) && (
+                  {((customer as any).car_insurance_data?.[0]?.갱신일) && (
                     <p className="text-xs text-slate-500 mt-1">
-                      <span className="font-medium">차량갱신:</span> {((customer as any).car_insurances?.[0]?.expiry_date)}
+                      <span className="font-medium">차량갱신:</span> {formatMonthDay((customer as any).car_insurance_data?.[0]?.갱신일)}
                     </p>
                   )}
                 </div>
