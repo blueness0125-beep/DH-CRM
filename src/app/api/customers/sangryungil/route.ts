@@ -24,17 +24,25 @@ export async function GET() {
     const currentMonth = today.getMonth() + 1
     const thisYear = today.getFullYear()
 
-    const sangryungilCustomers = (allCustomers ?? []).filter((c) => {
-      const [, cMm, cDd] = c.birth_date!.split("-")
-      
-      const birthdayThisYear = new Date(thisYear, parseInt(cMm) - 1, parseInt(cDd))
-      
-      const sangryungil = new Date(birthdayThisYear)
-      sangryungil.setDate(sangryungil.getDate() + 60)
-      
-      // 생일에 60일을 더한 날의 달이 이번 달과 일치하는지 확인
-      return (sangryungil.getMonth() + 1) === currentMonth
-    })
+    const sangryungilCustomers = (allCustomers ?? [])
+      .filter((c) => {
+        const [, cMm, cDd] = c.birth_date!.split("-")
+
+        const birthdayThisYear = new Date(thisYear, parseInt(cMm) - 1, parseInt(cDd))
+
+        const sangryungil = new Date(birthdayThisYear)
+        sangryungil.setDate(sangryungil.getDate() + 60)
+
+        // 생일에 60일을 더한 날의 달이 이번 달과 일치하는지 확인
+        return (sangryungil.getMonth() + 1) === currentMonth
+      })
+      .sort((a, b) => {
+        const [, aMm, aDd] = a.birth_date!.split("-")
+        const [, bMm, bDd] = b.birth_date!.split("-")
+        const aVal = parseInt(aMm) * 100 + parseInt(aDd)
+        const bVal = parseInt(bMm) * 100 + parseInt(bDd)
+        return aVal - bVal
+      })
 
     return NextResponse.json({ data: sangryungilCustomers })
   } catch (error) {
