@@ -34,18 +34,24 @@ export function CarInsuranceRenewalClient() {
   const [activeFilter, setActiveFilter] = useState("upcoming45")
   const [data, setData] = useState<CarInsuranceEntry[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const load = useCallback(() => {
     setLoading(true)
+    setError(null)
     const params = activeFilter === "all" ? "" : `?filter=${activeFilter}`
     fetch(`/api/renewals/car-insurance${params}`)
       .then((r) => {
         if (r.status === 401) { window.location.href = "/login"; return null }
         return r.json()
       })
-      .then((json) => { if (json) setData(json.data ?? []) })
-      .catch(() => {})
+      .then((json) => {
+        if (!json) return
+        if (json.error) { setError(json.error); return }
+        setData(json.data ?? [])
+      })
+      .catch((e) => setError(e?.message ?? "네트워크 오류"))
       .finally(() => setLoading(false))
   }, [activeFilter])
 
@@ -92,6 +98,10 @@ export function CarInsuranceRenewalClient() {
                 <Skeleton key={i} className="h-14 w-full" />
               ))}
             </div>
+          ) : error ? (
+            <p className="py-10 text-center text-sm text-destructive">
+              오류: {error}
+            </p>
           ) : data.length === 0 ? (
             <p className="py-10 text-center text-sm text-muted-foreground">
               해당 기간에 갱신 대상이 없습니다
