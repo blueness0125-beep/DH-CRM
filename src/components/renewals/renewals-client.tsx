@@ -9,6 +9,35 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ChevronLeft, ChevronRight, Phone, Car } from "lucide-react"
 import { formatPhone } from "@/lib/utils/format"
+import { cn } from "@/lib/utils"
+
+/** 모바일에서만 표시되는 갱신 관리 서브탭 (PC는 사이드바가 담당) */
+const SUB_TABS = [
+  { label: "일반 갱신", href: "/admin/renewals" },
+  { label: "자동차보험 갱신", href: "/admin/renewals/car-insurance" },
+]
+
+function MobileSubTabs() {
+  return (
+    <div className="flex rounded-lg border overflow-hidden md:hidden">
+      {SUB_TABS.map((tab) => (
+        <Link
+          key={tab.href}
+          href={tab.href}
+          className={cn(
+            "flex-1 py-2 text-center text-sm font-medium transition-colors",
+            // 현재 페이지는 /admin/renewals 이므로 일반 갱신 탭이 활성
+            tab.href === "/admin/renewals"
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:bg-muted"
+          )}
+        >
+          {tab.label}
+        </Link>
+      ))}
+    </div>
+  )
+}
 
 type RenewalItem = {
   등록번호: string
@@ -96,6 +125,9 @@ export function RenewalsClient() {
 
   return (
     <div className="space-y-6">
+      {/* 모바일 전용 서브탭: PC에서는 사이드바 하위 메뉴로 대체됨 */}
+      <MobileSubTabs />
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between">
         <h1 className="text-2xl font-bold">
           {isUpcoming45 ? "자동차보험 갱신 (45일 내)" : "갱신 관리"}

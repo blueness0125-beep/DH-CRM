@@ -10,6 +10,35 @@ import { Car, ChevronDown, ChevronUp, Phone } from "lucide-react"
 import { CarInsuranceDetail } from "./car-insurance-detail"
 import { formatPhone } from "@/lib/utils/format"
 import type { CarInsuranceEntry } from "@/app/api/renewals/car-insurance/route"
+import { cn } from "@/lib/utils"
+
+/** 모바일에서만 표시되는 갱신 관리 서브탭 (PC는 사이드바가 담당) */
+const SUB_TABS = [
+  { label: "일반 갱신", href: "/admin/renewals" },
+  { label: "자동차보험 갱신", href: "/admin/renewals/car-insurance" },
+]
+
+function MobileSubTabs() {
+  return (
+    <div className="flex rounded-lg border overflow-hidden md:hidden">
+      {SUB_TABS.map((tab) => (
+        <Link
+          key={tab.href}
+          href={tab.href}
+          className={cn(
+            "flex-1 py-2 text-center text-sm font-medium transition-colors",
+            // 현재 페이지는 /admin/renewals/car-insurance 이므로 자동차보험 탭이 활성
+            tab.href === "/admin/renewals/car-insurance"
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:bg-muted"
+          )}
+        >
+          {tab.label}
+        </Link>
+      ))}
+    </div>
+  )
+}
 
 const FILTERS = [
   { label: "45일 이내", value: "upcoming45" },
@@ -63,6 +92,9 @@ export function CarInsuranceRenewalClient() {
 
   return (
     <div className="space-y-4">
+      {/* 모바일 전용 서브탭: PC에서는 사이드바 하위 메뉴로 대체됨 */}
+      <MobileSubTabs />
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Car className="h-6 w-6" />
