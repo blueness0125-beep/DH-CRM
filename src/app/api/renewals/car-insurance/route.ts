@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import type { CarInsuranceContract } from "@/types/car-insurance"
+
+export type { CarInsuranceContract }
 
 export type CarInsuranceEntry = {
   등록번호: string
@@ -13,19 +16,9 @@ export type CarInsuranceEntry = {
   비교표경로: string | null
   가입정보경로: string | null
   이미지경로: string | null
-  계약일: string | null
-  보험사: string | null
-  채널: string | null
-  가입보험료: number | null
-  차량번호: string | null
-  증권번호: string | null
-  시작일: string | null
-  만기일: string | null
-  피보험자: string | null
-  계약자: string | null
-  설계자: string | null
   customer_id: string | null
   customers: { id: string; name: string; phone: string | null } | null
+  car_insurance_contracts: CarInsuranceContract[]
   fullRenewalDate: string
 }
 
@@ -43,11 +36,11 @@ export async function GET(req: NextRequest) {
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
     const { searchParams } = new URL(req.url)
-    const filter = searchParams.get("filter") // "upcoming45" | "month:MM" | null(all)
+    const filter = searchParams.get("filter")
 
     const { data: raw, error } = await supabase
       .from("car_insurance_data")
-      .select("*, customers ( id, name, phone )")
+      .select("*, customers ( id, name, phone ), car_insurance_contracts ( * )")
 
     if (error) throw error
 
@@ -56,6 +49,7 @@ export async function GET(req: NextRequest) {
 
     let items = ((raw as unknown as CarInsuranceEntry[]) ?? []).map((item) => ({
       ...item,
+      car_insurance_contracts: item.car_insurance_contracts ?? [],
       fullRenewalDate: item.갱신일?.trim()
         ? getNextRenewalDate(item.갱신일, today).toISOString().split("T")[0]
         : "",

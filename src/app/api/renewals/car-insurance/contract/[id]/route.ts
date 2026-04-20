@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { z } from "zod"
 
-const contractSchema = z.object({
-  car_insurance_id: z.string().min(1),
+const updateSchema = z.object({
   계약일: z.string().min(1),
   보험사: z.string().min(1),
   채널: z.string().min(1),
@@ -17,42 +16,53 @@ const contractSchema = z.object({
   설계자: z.string().nullable(),
 })
 
-export async function POST(req: NextRequest) {
+type Params = { params: Promise<{ id: string }> }
+
+export async function PUT(req: NextRequest, { params }: Params) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
+    const { id } = await params
     const body = await req.json()
-    const parsed = contractSchema.parse(body)
+    const parsed = updateSchema.parse(body)
 
     const { data, error } = await supabase
       .from("car_insurance_contracts")
-      .insert(parsed)
+      .update(parsed)
+      .eq("id", id)
       .select()
       .single()
 
     if (error) throw error
-
-    // 첫 계약 추가 시 상태를 "완료"로 자동 변경
-    const { data: existing } = await supabase
-      .from("car_insurance_contracts")
-      .select("id")
-      .eq("car_insurance_id", parsed.car_insurance_id)
-
-    if ((existing?.length ?? 0) <= 1) {
-      await supabase
-        .from("car_insurance_data")
-        .update({ 상태: "완료" } as Record<string, unknown>)
-        .eq("등록번호", parsed.car_insurance_id)
-    }
-
     return NextResponse.json({ success: true, data })
   } catch (e) {
     if (e instanceof z.ZodError) {
       return NextResponse.json({ error: "입력값이 올바르지 않습니다", details: e.issues }, { status: 400 })
     }
     console.error(e)
-    return NextResponse.json({ error: "저장에 실패했습니다" }, { status: 500 })
+    return NextResponse.json({ error: "수정에 실패했습니다" }, { status: 500 })
+  }
+}
+
+export async function DELETE(req: NextRequest, { params }: Params) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+    const { id } = await params
+
+    const { error } = await supabase
+      .from("car_insurance_contracts")
+      .delete()
+      .eq("id", id)
+
+    if (error) throw error
+    return NextResponse.json({ success: true })
+  } catch (e) {
+    console.error(e)
+    return NextResponse.json({ error: "삭제에 실패했습니다" }, { status: 500 })
   }
 }

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { CarInsuranceEntry } from "@/app/api/renewals/car-insurance/route"
+import type { CarInsuranceContract } from "@/types/car-insurance"
 
 function parseVehicleNumbers(차량정보: string | null): string[] {
   if (!차량정보) return []
@@ -31,13 +32,16 @@ function addOneYear(dateStr: string): string {
 
 type Props = {
   entry: CarInsuranceEntry | null
+  contract?: CarInsuranceContract | null
   open: boolean
   onOpenChange: (open: boolean) => void
   onSaved: () => void
 }
 
-export function CarInsuranceContractForm({ entry, open, onOpenChange, onSaved }: Props) {
+export function CarInsuranceContractForm({ entry, contract, open, onOpenChange, onSaved }: Props) {
   const vehicleNumbers = parseVehicleNumbers(entry?.차량정보 ?? null)
+  const isEditing = Boolean(contract)
+
   const [form, setForm] = useState({
     계약일: todayStr(),
     보험사: "삼성화재",
@@ -55,23 +59,39 @@ export function CarInsuranceContractForm({ entry, open, onOpenChange, onSaved }:
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!entry) return
-    const 시작일 = entry.시작일 ?? todayStr()
-    setForm({
-      계약일: entry.계약일 ?? todayStr(),
-      보험사: entry.보험사 ?? "삼성화재",
-      채널: entry.채널 ?? "씨엠",
-      가입보험료: entry.가입보험료 != null ? String(entry.가입보험료) : "",
-      차량번호: entry.차량번호 ?? (vehicleNumbers.length > 0 ? "" : ""),
-      증권번호: entry.증권번호 ?? "",
-      시작일,
-      만기일: entry.만기일 ?? addOneYear(시작일),
-      피보험자: entry.피보험자 ?? entry.고객명 ?? "",
-      계약자: entry.계약자 ?? entry.고객명 ?? "",
-      설계자: entry.설계자 ?? "송상훈",
-    })
+    if (!open) return
+    if (contract) {
+      setForm({
+        계약일: contract.계약일,
+        보험사: contract.보험사,
+        채널: contract.채널,
+        가입보험료: contract.가입보험료 != null ? String(contract.가입보험료) : "",
+        차량번호: contract.차량번호 ?? "",
+        증권번호: contract.증권번호 ?? "",
+        시작일: contract.시작일 ?? todayStr(),
+        만기일: contract.만기일 ?? addOneYear(contract.시작일 ?? todayStr()),
+        피보험자: contract.피보험자 ?? "",
+        계약자: contract.계약자 ?? "",
+        설계자: contract.설계자 ?? "송상훈",
+      })
+    } else {
+      const 시작일 = todayStr()
+      setForm({
+        계약일: todayStr(),
+        보험사: "삼성화재",
+        채널: "씨엠",
+        가입보험료: "",
+        차량번호: "",
+        증권번호: "",
+        시작일,
+        만기일: addOneYear(시작일),
+        피보험자: entry?.고객명 ?? "",
+        계약자: entry?.고객명 ?? "",
+        설계자: "송상훈",
+      })
+    }
     setError(null)
-  }, [entry])
+  }, [open, contract, entry])
 
   function set(field: string, value: string | null) {
     const val = value ?? ""
@@ -87,24 +107,32 @@ export function CarInsuranceContractForm({ entry, open, onOpenChange, onSaved }:
     setSaving(true)
     setError(null)
     try {
-      const res = await fetch("/api/renewals/car-insurance/contract", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          등록번호: entry.등록번호,
-          계약일: form.계약일,
-          보험사: form.보험사,
-          채널: form.채널,
-          가입보험료: form.가입보험료 ? parseInt(form.가입보험료) : null,
-          차량번호: form.차량번호 || null,
-          증권번호: form.증권번호 || null,
-          시작일: form.시작일 || null,
-          만기일: form.만기일 || null,
-          피보험자: form.피보험자 || null,
-          계약자: form.계약자 || null,
-          설계자: form.설계자 || null,
-        }),
-      })
+      const payload = {
+        계약일: form.계약일,
+        보험사: form.보험사,
+        채널: form.채널,
+        가입보험료: form.가입보험료 ? parseInt(form.가입보험료) : null,
+        차량번호: form.차량번호 || null,
+        증권번호: form.증권번호 || null,
+        시작일: form.시작일 || null,
+        만기일: form.만기일 || null,
+        피보험자: form.피보험자 || null,
+        계약자: form.계약자 || null,
+        설계자: form.설계자 || null,
+      }
+
+      const res = isEditing
+        ? await fetch(`/api/renewals/car-insurance/contract/${contract!.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          })
+        : await fetch("/api/renewals/car-insurance/contract", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ car_insurance_id: entry.등록번호, ...payload }),
+          })
+
       if (!res.ok) {
         const j = await res.json()
         throw new Error(j.error ?? "저장 실패")
@@ -122,7 +150,7 @@ export function CarInsuranceContractForm({ entry, open, onOpenChange, onSaved }:
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>자동차보험 계약 체결</DialogTitle>
+          <DialogTitle>{isEditing ? "계약 수정" : "자동차보험 계약 체결"}</DialogTitle>
           {entry && (
             <p className="text-sm text-muted-foreground">{entry.고객명} · 갱신일 {entry.갱신일}</p>
           )}
@@ -213,7 +241,7 @@ export function CarInsuranceContractForm({ entry, open, onOpenChange, onSaved }:
               취소
             </Button>
             <Button className="flex-1" onClick={handleSubmit} disabled={saving}>
-              {saving ? "저장 중..." : "저장"}
+              {saving ? "저장 중..." : isEditing ? "수정" : "저장"}
             </Button>
           </div>
         </div>

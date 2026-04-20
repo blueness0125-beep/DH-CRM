@@ -2,11 +2,12 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { CarInsuranceContractForm } from "./car-insurance-contract-form"
 import type { CarInsuranceEntry } from "@/app/api/renewals/car-insurance/route"
+import type { CarInsuranceContract } from "@/types/car-insurance"
+import { Plus, Pencil, Trash2 } from "lucide-react"
 
 const 상태_목록 = ["상담 대기", "진행중", "보류", "완료", "취소"]
 
@@ -87,6 +88,76 @@ function MediaGrid({ urls, onClickImage }: { urls: string[]; onClickImage: (src:
   )
 }
 
+function ContractCard({
+  contract,
+  index,
+  onEdit,
+  onDelete,
+}: {
+  contract: CarInsuranceContract
+  index: number
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  const [deleting, setDeleting] = useState(false)
+
+  async function handleDelete() {
+    if (!confirm("이 계약을 삭제할까요?")) return
+    setDeleting(true)
+    try {
+      await fetch(`/api/renewals/car-insurance/contract/${contract.id}`, { method: "DELETE" })
+      onDelete()
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <div className="rounded-lg border border-green-200 bg-green-50 p-4 space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-green-700">
+          계약 {index + 1}{contract.차량번호 ? ` · ${contract.차량번호}` : ""}
+        </span>
+        <div className="flex gap-1">
+          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={onEdit}>
+            <Pencil className="h-3 w-3 mr-1" />수정
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 px-2 text-xs text-destructive hover:text-destructive"
+            onClick={handleDelete}
+            disabled={deleting}
+          >
+            <Trash2 className="h-3 w-3 mr-1" />{deleting ? "삭제 중..." : "삭제"}
+          </Button>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+        {([
+          ["계약일", contract.계약일],
+          ["보험사", contract.보험사],
+          ["채널", contract.채널],
+          ["가입보험료", contract.가입보험료 != null ? `${contract.가입보험료.toLocaleString()}원` : null],
+          ["증권번호", contract.증권번호],
+          ["시작일", contract.시작일],
+          ["만기일", contract.만기일],
+          ["피보험자", contract.피보험자],
+          ["계약자", contract.계약자],
+          ["설계자", contract.설계자],
+        ] as [string, string | number | null][]).map(([label, value]) =>
+          value != null ? (
+            <div key={label}>
+              <span className="text-muted-foreground">{label}: </span>
+              <span className="font-medium">{value}</span>
+            </div>
+          ) : null
+        )}
+      </div>
+    </div>
+  )
+}
+
 type Props = {
   entry: CarInsuranceEntry
   onContractSaved: () => void
@@ -95,6 +166,7 @@ type Props = {
 export function CarInsuranceDetail({ entry, onContractSaved }: Props) {
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
   const [contractOpen, setContractOpen] = useState(false)
+  const [editingContract, setEditingContract] = useState<CarInsuranceContract | null>(null)
   const [editState, setEditState] = useState(entry.상태 ?? "")
   const [editMemo, setEditMemo] = useState(entry.메모 ?? "")
   const [saving, setSaving] = useState(false)
@@ -102,7 +174,7 @@ export function CarInsuranceDetail({ entry, onContractSaved }: Props) {
   const 가입정보 = parseUrls(entry.가입정보경로)
   const 비교표 = parseUrls(entry.비교표경로)
   const 이미지 = parseUrls(entry.이미지경로)
-  const hasContract = Boolean(entry.계약일)
+  const contracts = entry.car_insurance_contracts ?? []
   const stateChanged = editState !== (entry.상태 ?? "") || editMemo !== (entry.메모 ?? "")
 
   async function saveStatus() {
@@ -121,6 +193,16 @@ export function CarInsuranceDetail({ entry, onContractSaved }: Props) {
     } finally {
       setSaving(false)
     }
+  }
+
+  function openAdd() {
+    setEditingContract(null)
+    setContractOpen(true)
+  }
+
+  function openEdit(contract: CarInsuranceContract) {
+    setEditingContract(contract)
+    setContractOpen(true)
   }
 
   return (
@@ -192,47 +274,27 @@ export function CarInsuranceDetail({ entry, onContractSaved }: Props) {
         </section>
       )}
 
-      {/* 계약 완료 정보 */}
-      {hasContract && (
-        <section className="rounded-lg border border-green-200 bg-green-50 p-4 space-y-2">
-          <SectionTitle>계약 완료</SectionTitle>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-            {([
-              ["계약일", entry.계약일],
-              ["보험사", entry.보험사],
-              ["채널", entry.채널],
-              ["가입보험료", entry.가입보험료 != null ? `${entry.가입보험료.toLocaleString()}원` : null],
-              ["차량번호", entry.차량번호],
-              ["증권번호", entry.증권번호],
-              ["시작일", entry.시작일],
-              ["만기일", entry.만기일],
-              ["피보험자", entry.피보험자],
-              ["계약자", entry.계약자],
-              ["설계자", entry.설계자],
-            ] as [string, string | number | null][]).map(([label, value]) =>
-              value != null ? (
-                <div key={label}>
-                  <span className="text-muted-foreground">{label}: </span>
-                  <span className="font-medium">{value}</span>
-                </div>
-              ) : null
-            )}
-          </div>
+      {/* 계약 목록 */}
+      {contracts.length > 0 && (
+        <section className="space-y-2">
+          <SectionTitle>계약 완료 ({contracts.length}건)</SectionTitle>
+          {contracts.map((c, i) => (
+            <ContractCard
+              key={c.id}
+              contract={c}
+              index={i}
+              onEdit={() => openEdit(c)}
+              onDelete={onContractSaved}
+            />
+          ))}
         </section>
       )}
 
-      {/* 계약 버튼 */}
+      {/* 계약 추가 버튼 */}
       <div className="flex justify-end pt-1">
-        <Button
-          size="sm"
-          variant={hasContract ? "outline" : "default"}
-          onClick={() => setContractOpen(true)}
-        >
-          {hasContract ? (
-            <><Badge variant="secondary" className="mr-2 text-xs">완료</Badge>계약 수정</>
-          ) : (
-            "자동차보험 갱신 계약 입력"
-          )}
+        <Button size="sm" onClick={openAdd}>
+          <Plus className="h-3.5 w-3.5 mr-1" />
+          {contracts.length === 0 ? "계약 입력" : "계약 추가"}
         </Button>
       </div>
 
@@ -240,6 +302,7 @@ export function CarInsuranceDetail({ entry, onContractSaved }: Props) {
 
       <CarInsuranceContractForm
         entry={entry}
+        contract={editingContract}
         open={contractOpen}
         onOpenChange={setContractOpen}
         onSaved={onContractSaved}

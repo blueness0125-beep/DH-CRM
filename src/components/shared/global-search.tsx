@@ -100,7 +100,11 @@ export function GlobalSearch() {
       <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setQuery(""); setResults([]) } }}>
         <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-xl">
           <div className="flex items-center border-b px-4">
-            <Search className="mr-3 h-4 w-4 shrink-0 text-muted-foreground" />
+            {loading ? (
+              <Loader2 className="mr-3 h-4 w-4 shrink-0 animate-spin text-primary" />
+            ) : (
+              <Search className="mr-3 h-4 w-4 shrink-0 text-muted-foreground" />
+            )}
             <Input
               ref={inputRef}
               value={query}
@@ -110,10 +114,21 @@ export function GlobalSearch() {
               className="h-12 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
               autoFocus
             />
-            {loading && <Loader2 className="ml-2 h-4 w-4 animate-spin text-muted-foreground" />}
           </div>
 
-          {results.length > 0 ? (
+          {loading && query ? (
+            <ul className="max-h-80 overflow-y-auto py-2">
+              {[...Array(3)].map((_, i) => (
+                <li key={i} className="flex items-center gap-3 px-4 py-2.5">
+                  <div className="h-8 w-8 rounded-full bg-muted animate-pulse shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-3.5 w-24 rounded bg-muted animate-pulse" />
+                    <div className="h-3 w-40 rounded bg-muted animate-pulse" />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : results.length > 0 ? (
             <ul className="max-h-80 overflow-y-auto py-2">
               {results.map((c, idx) => (
                 <li key={c.id}>
@@ -142,15 +157,15 @@ export function GlobalSearch() {
                 </li>
               ))}
             </ul>
-          ) : query && !loading ? (
+          ) : query ? (
             <div className="py-10 text-center text-sm text-muted-foreground">
               "{query}" 검색 결과 없음
             </div>
-          ) : !query ? (
+          ) : (
             <div className="py-6 text-center text-xs text-muted-foreground">
               이름, 전화번호, 주소로 검색하세요
             </div>
-          ) : null}
+          )}
 
           <div className="border-t px-4 py-2 text-xs text-muted-foreground flex gap-4">
             <span><kbd className="rounded border px-1">↑↓</kbd> 이동</span>

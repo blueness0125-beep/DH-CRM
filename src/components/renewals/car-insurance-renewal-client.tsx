@@ -143,7 +143,7 @@ export function CarInsuranceRenewalClient() {
               {data.map((item) => {
                 const isExpanded = expandedId === item.등록번호
                 const phone = item.customers?.phone || item.연락처
-                const hasContract = Boolean(item.계약일)
+                const hasContract = (item.car_insurance_contracts?.length ?? 0) > 0
                 const vehicleSummary = item.차량정보?.split("\n")[0] ?? ""
 
                 return (
