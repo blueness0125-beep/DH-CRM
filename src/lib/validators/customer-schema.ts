@@ -2,6 +2,8 @@ import { z } from "zod"
 
 export const customerCreateSchema = z.object({
   name: z.string().min(1, "이름을 입력해주세요"),
+  customer_type: z.enum(["individual", "corporate"]).optional(),
+  business_number: z.string().regex(/^\d{3}-\d{2}-\d{5}$/, "사업자등록번호 형식(000-00-00000)").nullable().optional().or(z.literal("")),
   birth_date: z.string().nullable().optional(),
   ssn_back: z.string().max(7).nullable().optional(),
   gender: z.enum(["M", "F"]).nullable().optional(),

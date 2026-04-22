@@ -228,17 +228,32 @@ export function CustomerListContainer() {
                   className="cursor-pointer hover:bg-muted/50"
                   onClick={() => router.push(`/admin/customers/${customer.id}`)}
                 >
-                  <TableCell className="font-medium">{customer.name}</TableCell>
-                  <TableCell>{formatDate(customer.birth_date)}</TableCell>
-                  <TableCell>{calculateAge(customer.birth_date) ?? "-"}</TableCell>
+                  <TableCell className="font-medium">
+                    {customer.name}
+                    {customer.customer_type === "corporate" && (
+                      <Badge variant="secondary" className="ml-2">법인</Badge>
+                    )}
+                  </TableCell>
                   <TableCell>
-                    {customer.gender && (
+                    {customer.customer_type === "corporate"
+                      ? (customer.business_number ?? "-")
+                      : formatDate(customer.birth_date)}
+                  </TableCell>
+                  <TableCell>
+                    {customer.customer_type === "corporate"
+                      ? "-"
+                      : (calculateAge(customer.birth_date) ?? "-")}
+                  </TableCell>
+                  <TableCell>
+                    {customer.customer_type === "corporate" ? (
+                      "-"
+                    ) : customer.gender ? (
                       customer.gender === "M" ? (
                         <Badge variant="default">남</Badge>
                       ) : (
                         <Badge style={{ backgroundColor: "#fce4ec", color: "#c2185b", border: "1px solid #f48fb1" }}>여</Badge>
                       )
-                    )}
+                    ) : null}
                   </TableCell>
                   <TableCell>{formatPhone(customer.phone)}</TableCell>
                   <TableCell>
@@ -293,10 +308,21 @@ export function CustomerListContainer() {
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="font-medium">{customer.name}</p>
+                  <p className="font-medium">
+                    {customer.name}
+                    {customer.customer_type === "corporate" && (
+                      <Badge variant="secondary" className="ml-2">법인</Badge>
+                    )}
+                  </p>
                   <p className="text-sm text-muted-foreground">
-                    {formatDate(customer.birth_date)}
-                    {calculateAge(customer.birth_date) != null && ` (${calculateAge(customer.birth_date)}세)`}
+                    {customer.customer_type === "corporate" ? (
+                      customer.business_number ?? "-"
+                    ) : (
+                      <>
+                        {formatDate(customer.birth_date)}
+                        {calculateAge(customer.birth_date) != null && ` (${calculateAge(customer.birth_date)}세)`}
+                      </>
+                    )}
                   </p>
                   {customer.phone && (
                     <p className="text-sm text-muted-foreground">{formatPhone(customer.phone)}</p>

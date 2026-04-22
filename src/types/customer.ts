@@ -1,6 +1,8 @@
 export type Customer = {
   id: string
   sequence_code: string | null
+  customer_type: "individual" | "corporate"
+  business_number: string | null
   name: string
   birth_date: string | null
   ssn_back: string | null

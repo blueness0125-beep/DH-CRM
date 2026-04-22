@@ -45,6 +45,7 @@ function InfoRow({ label, value, href }: { label: string; value: string; href?: 
 
 export function CustomerDetail({ customer, familyMembers }: CustomerDetailProps) {
   const router = useRouter()
+  const isCorporate = customer.customer_type === "corporate"
 
   return (
     <div className="space-y-6">
@@ -55,11 +56,20 @@ export function CustomerDetail({ customer, familyMembers }: CustomerDetailProps)
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="min-w-0">
-            <h1 className="truncate text-2xl font-bold">{customer.name}</h1>
+            <h1 className="truncate text-2xl font-bold">
+              {customer.name}
+              {isCorporate && <span className="ml-2 text-sm font-normal text-muted-foreground">(법인)</span>}
+            </h1>
             <p className="truncate text-sm text-muted-foreground">
-              {formatDate(customer.birth_date)}
-              {calculateAge(customer.birth_date) != null && ` (${calculateAge(customer.birth_date)}세)`}
-              {customer.gender && ` · ${formatGender(customer.gender)}`}
+              {isCorporate ? (
+                <>사업자등록번호: {customer.business_number ?? "-"}</>
+              ) : (
+                <>
+                  {formatDate(customer.birth_date)}
+                  {calculateAge(customer.birth_date) != null && ` (${calculateAge(customer.birth_date)}세)`}
+                  {customer.gender && ` · ${formatGender(customer.gender)}`}
+                </>
+              )}
             </p>
           </div>
         </div>
@@ -107,18 +117,24 @@ export function CustomerDetail({ customer, familyMembers }: CustomerDetailProps)
           </CardContent>
         </Card>
 
-        {/* Personal */}
+        {/* Personal / Corporate */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <Users className="h-4 w-4" />
-              개인 정보
+              {isCorporate ? "법인 정보" : "개인 정보"}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
-            <InfoRow label="생년월일" value={formatDate(customer.birth_date)} />
-            <InfoRow label="성별" value={formatGender(customer.gender)} />
-            <InfoRow label="주민번호 뒷자리" value={customer.ssn_back ?? ""} />
+            {isCorporate ? (
+              <InfoRow label="사업자등록번호" value={customer.business_number ?? ""} />
+            ) : (
+              <>
+                <InfoRow label="생년월일" value={formatDate(customer.birth_date)} />
+                <InfoRow label="성별" value={formatGender(customer.gender)} />
+                <InfoRow label="주민번호 뒷자리" value={customer.ssn_back ?? ""} />
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -147,19 +163,21 @@ export function CustomerDetail({ customer, familyMembers }: CustomerDetailProps)
           </CardContent>
         </Card>
 
-        {/* Work Address */}
+        {/* Work Address - 개인만 직업 정보 표시, 법인은 직장 주소만 */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <Briefcase className="h-4 w-4" />
-              직장 정보
+              {isCorporate ? "법인 주소" : "직장 정보"}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <InfoRow label="회사명" value={customer.work_company_name ?? ""} />
+            {!isCorporate && <InfoRow label="회사명" value={customer.work_company_name ?? ""} />}
             {customer.work_address && (
               <div className="space-y-1 py-2">
-                <span className="text-xs text-muted-foreground">직장 주소</span>
+                <span className="text-xs text-muted-foreground">
+                  {isCorporate ? "주소" : "직장 주소"}
+                </span>
                 {customer.work_zonecode && (
                   <p className="text-xs text-muted-foreground">{customer.work_zonecode}</p>
                 )}
@@ -169,9 +187,13 @@ export function CustomerDetail({ customer, familyMembers }: CustomerDetailProps)
                 )}
               </div>
             )}
-            <InfoRow label="직업 분류" value={customer.job_category ?? ""} />
-            <InfoRow label="직업명" value={customer.job_name ?? ""} />
-            <InfoRow label="위험등급" value={customer.job_risk_grade ?? ""} />
+            {!isCorporate && (
+              <>
+                <InfoRow label="직업 분류" value={customer.job_category ?? ""} />
+                <InfoRow label="직업명" value={customer.job_name ?? ""} />
+                <InfoRow label="위험등급" value={customer.job_risk_grade ?? ""} />
+              </>
+            )}
           </CardContent>
         </Card>
 
