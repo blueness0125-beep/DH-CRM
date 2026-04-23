@@ -26,10 +26,10 @@ export class ConsultationLogRepository {
     return data
   }
 
-  async create(customerId: string, content: string): Promise<ConsultationLog> {
+  async create(customerId: string, content: string, consultationDate: string): Promise<ConsultationLog> {
     const { data, error } = await this.supabase
       .from("consultation_logs")
-      .insert({ customer_id: customerId, content })
+      .insert({ customer_id: customerId, content, consultation_date: consultationDate })
       .select("*, consultation_log_attachments(*)")
       .single()
 

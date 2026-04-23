@@ -13,6 +13,7 @@ export type ConsultationLog = {
   id: string
   customer_id: string
   content: string
+  consultation_date: string | null
   created_at: string
   updated_at: string
   consultation_log_attachments: ConsultationLogAttachment[]

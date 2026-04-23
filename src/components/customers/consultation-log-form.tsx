@@ -1,14 +1,19 @@
 "use client"
 
 import { useState, useRef } from "react"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { FileImage, FileText, Upload, X } from "lucide-react"
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const MAX_FILES = 5
+
+function todayStr() {
+  return new Date().toISOString().split("T")[0]
+}
 
 type SelectedFile = { file: File; id: string }
 
@@ -38,6 +43,7 @@ function FileItem({ item, onRemove }: { item: SelectedFile; onRemove: () => void
 }
 
 export function ConsultationLogForm({ customerId, isOpen, onClose, onSuccess }: Props) {
+  const [consultationDate, setConsultationDate] = useState(todayStr)
   const [content, setContent] = useState("")
   const [files, setFiles] = useState<SelectedFile[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -45,6 +51,7 @@ export function ConsultationLogForm({ customerId, isOpen, onClose, onSuccess }: 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   function reset() {
+    setConsultationDate(todayStr())
     setContent("")
     setFiles([])
     setError(null)
@@ -90,6 +97,7 @@ export function ConsultationLogForm({ customerId, isOpen, onClose, onSuccess }: 
       const formData = new FormData()
       formData.append("customerId", customerId)
       formData.append("content", content.trim())
+      formData.append("consultationDate", consultationDate)
       files.forEach(({ file }) => formData.append("files", file))
 
       const res = await fetch("/api/consultation-logs", { method: "POST", body: formData })
@@ -108,21 +116,32 @@ export function ConsultationLogForm({ customerId, isOpen, onClose, onSuccess }: 
   }
 
   return (
-    <Sheet open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <SheetContent className="flex w-full flex-col sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle>상담일지 작성</SheetTitle>
-        </SheetHeader>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>상담일지 작성</DialogTitle>
+        </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-4 overflow-hidden py-4">
-          <div className="flex flex-1 flex-col gap-2 overflow-hidden">
+        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="consultationDate">상담 날짜</Label>
+            <Input
+              id="consultationDate"
+              type="date"
+              value={consultationDate}
+              onChange={(e) => setConsultationDate(e.target.value)}
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <div className="space-y-1.5">
             <Label htmlFor="content">상담 내용 *</Label>
             <Textarea
               id="content"
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="상담 내용을 입력하세요..."
-              className="flex-1 resize-none"
+              className="min-h-[200px] resize-none"
               disabled={isSubmitting}
             />
           </div>
@@ -163,16 +182,16 @@ export function ConsultationLogForm({ customerId, isOpen, onClose, onSuccess }: 
             {error && <p className="text-sm text-destructive">{error}</p>}
           </div>
 
-          <SheetFooter className="gap-2">
-            <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
-              취소
-            </Button>
+          <div className="flex flex-col gap-2 pt-2">
             <Button type="submit" disabled={isSubmitting || !content.trim()}>
               {isSubmitting ? "저장 중..." : "저장"}
             </Button>
-          </SheetFooter>
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
+              취소
+            </Button>
+          </div>
         </form>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }

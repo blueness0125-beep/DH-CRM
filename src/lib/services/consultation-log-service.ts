@@ -17,13 +17,13 @@ export class ConsultationLogService {
     return this.withSignedUrls(logs)
   }
 
-  async createLog(customerId: string, content: string, files: File[]): Promise<ConsultationLog> {
+  async createLog(customerId: string, content: string, files: File[], consultationDate: string): Promise<ConsultationLog> {
     const oversized = files.find((f) => f.size > MAX_FILE_SIZE)
     if (oversized) {
       throw new Error(`파일 크기 초과: ${oversized.name} (최대 10MB)`)
     }
 
-    const log = await this.repository.create(customerId, content)
+    const log = await this.repository.create(customerId, content, consultationDate)
 
     for (const file of files) {
       const path = `${customerId}/${log.id}/${Date.now()}_${file.name}`

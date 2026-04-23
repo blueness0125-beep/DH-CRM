@@ -60,7 +60,9 @@ function LogItem({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs text-muted-foreground">{dateStr}</span>
+        <span className="text-xs text-muted-foreground">
+          {log.consultation_date ? log.consultation_date.replace(/-/g, ".") : dateStr}
+        </span>
         <AlertDialog>
           <AlertDialogTrigger
             render={

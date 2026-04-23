@@ -25,6 +25,7 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData()
     const customerId = formData.get("customerId") as string
     const content = formData.get("content") as string
+    const consultationDate = (formData.get("consultationDate") as string) || new Date().toISOString().split("T")[0]
     const files = formData.getAll("files").filter((f): f is File => f instanceof File && f.size > 0)
 
     if (!customerId || !content?.trim()) {
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
     const service = new ConsultationLogService(supabase)
-    const log = await service.createLog(customerId, content.trim(), files)
+    const log = await service.createLog(customerId, content.trim(), files, consultationDate)
 
     return NextResponse.json(log, { status: 201 })
   } catch (error) {
