@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -8,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import {
   ArrowLeft,
+  BookOpen,
   Pencil,
   Phone,
   Mail,
@@ -20,6 +22,8 @@ import {
 import { formatPhone, formatDate, calculateAge, formatGender } from "@/lib/utils/format"
 import { FamilyGroupSection } from "@/components/customers/family-group-section"
 import { RelatedPersonsSection } from "@/components/customers/related-persons-section"
+import { ConsultationLogSection } from "@/components/customers/consultation-log-section"
+import { ConsultationLogForm } from "@/components/customers/consultation-log-form"
 import type { Customer } from "@/types/customer"
 
 type CustomerDetailProps = {
@@ -46,6 +50,8 @@ function InfoRow({ label, value, href }: { label: string; value: string; href?: 
 export function CustomerDetail({ customer, familyMembers }: CustomerDetailProps) {
   const router = useRouter()
   const isCorporate = customer.customer_type === "corporate"
+  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   return (
     <div className="space-y-6">
@@ -73,12 +79,18 @@ export function CustomerDetail({ customer, familyMembers }: CustomerDetailProps)
             </p>
           </div>
         </div>
-        <Link href={`/admin/customers/${customer.id}/edit`} className="shrink-0">
-          <Button size="sm">
-            <Pencil className="mr-2 h-4 w-4" />
-            수정
+        <div className="flex shrink-0 items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => setIsFormOpen(true)}>
+            <BookOpen className="mr-2 h-4 w-4" />
+            상담일지
           </Button>
-        </Link>
+          <Link href={`/admin/customers/${customer.id}/edit`}>
+            <Button size="sm">
+              <Pencil className="mr-2 h-4 w-4" />
+              수정
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Quick Actions - Mobile */}
@@ -100,6 +112,8 @@ export function CustomerDetail({ customer, familyMembers }: CustomerDetailProps)
           )}
         </div>
       )}
+
+      <ConsultationLogSection customerId={customer.id} refreshKey={refreshKey} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Contact */}
@@ -258,6 +272,13 @@ export function CustomerDetail({ customer, familyMembers }: CustomerDetailProps)
         familyMembers={familyMembers ?? []}
       />
       <RelatedPersonsSection customerId={customer.id} />
+
+      <ConsultationLogForm
+        customerId={customer.id}
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        onSuccess={() => setRefreshKey((prev) => prev + 1)}
+      />
     </div>
   )
 }
