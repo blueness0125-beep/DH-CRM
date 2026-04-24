@@ -21,9 +21,9 @@ import { formatPhone, formatDate, calculateAge } from "@/lib/utils/format"
 import type { Customer } from "@/types/customer"
 import { toast } from "sonner"
 
-const RELATIONSHIP_TYPES = [
-  "배우자", "자녀", "부모", "형제", "지인", "소개인", "동료", "기타",
-]
+const FAMILY_RELATIONSHIP_TYPES = new Set(["배우자", "자녀", "부모", "형제"])
+
+const RELATIONSHIP_TYPES = ["지인", "소개인", "동료", "기타"]
 
 type RelationshipItem = {
   id: string
@@ -113,7 +113,7 @@ export function RelatedPersonsSection({ customerId }: RelatedPersonsSectionProps
   const allRelationships = [
     ...relationships.map((r) => ({ ...r, direction: "direct" as const })),
     ...inverseRelationships.map((r) => ({ ...r, direction: "inverse" as const })),
-  ]
+  ].filter((r) => !FAMILY_RELATIONSHIP_TYPES.has(r.relationship_type))
 
   const excludeIds = [customerId, ...allRelationships.map((r) => r.related_customer.id)]
 

@@ -1,16 +1,40 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Users, Plus, X, UserPlus } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import { Users, UserPlus, X } from "lucide-react"
 import { CustomerSearchDialog } from "@/components/shared/customer-search-dialog"
 import { formatPhone, formatDate, calculateAge } from "@/lib/utils/format"
 import type { Customer } from "@/types/customer"
 import { toast } from "sonner"
+
+const FAMILY_RELATIONSHIP_TYPES = ["배우자", "자녀", "부모", "형제"]
+
+// 역방향 관계 표시용 (A가 B의 자녀면, B는 A의 부모)
+const INVERSE_TYPE: Record<string, string> = {
+  자녀: "부모",
+  부모: "자녀",
+  배우자: "배우자",
+  형제: "형제",
+}
+
+type RelationshipRecord = {
+  id: string
+  customer_id: string
+  related_customer_id: string
+  relationship_type: string
+}
 
 type FamilyGroupSectionProps = {
   customer: Customer
@@ -20,14 +44,48 @@ type FamilyGroupSectionProps = {
 export function FamilyGroupSection({ customer, familyMembers }: FamilyGroupSectionProps) {
   const router = useRouter()
   const [searchOpen, setSearchOpen] = useState(false)
+  const [typeDialogOpen, setTypeDialogOpen] = useState(false)
+  const [selectedMember, setSelectedMember] = useState<Customer | null>(null)
+  const [selectedType, setSelectedType] = useState("")
+  const [relationshipMap, setRelationshipMap] = useState<Map<string, string>>(new Map())
+
+  useEffect(() => {
+    fetchRelationshipTypes()
+  }, [customer.id, familyMembers])
+
+  async function fetchRelationshipTypes() {
+    try {
+      const res = await fetch(`/api/customers/${customer.id}/relationships`)
+      if (!res.ok) return
+      const json = await res.json()
+      const map = new Map<string, string>()
+
+      for (const r of (json.data.direct ?? []) as RelationshipRecord[]) {
+        map.set(r.related_customer_id, r.relationship_type)
+      }
+      for (const r of (json.data.inverse ?? []) as RelationshipRecord[]) {
+        const displayType = INVERSE_TYPE[r.relationship_type] ?? r.relationship_type
+        map.set(r.customer_id, displayType)
+      }
+      setRelationshipMap(map)
+    } catch {
+      // ignore
+    }
+  }
 
   async function handleAddMember(selected: Customer) {
+    setSelectedMember(selected)
+    setTypeDialogOpen(true)
+  }
+
+  async function confirmAddMember() {
+    if (!selectedMember || !selectedType) return
     try {
       if (customer.family_group_id) {
         const res = await fetch(`/api/family-groups/${customer.family_group_id}/members`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ customer_id: selected.id }),
+          body: JSON.stringify({ customer_id: selectedMember.id }),
         })
         if (!res.ok) throw new Error()
       } else {
@@ -36,13 +94,27 @@ export function FamilyGroupSection({ customer, familyMembers }: FamilyGroupSecti
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name: `${customer.name} 가족`,
-            member_ids: [customer.id, selected.id],
+            member_ids: [customer.id, selectedMember.id],
             primary_id: customer.id,
           }),
         })
         if (!res.ok) throw new Error()
       }
-      toast.success(`${selected.name}님을 가족으로 추가했습니다`)
+
+      await fetch("/api/relationships", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customer_id: customer.id,
+          related_customer_id: selectedMember.id,
+          relationship_type: selectedType,
+        }),
+      })
+
+      toast.success(`${selectedMember.name}님을 가족으로 추가했습니다`)
+      setTypeDialogOpen(false)
+      setSelectedMember(null)
+      setSelectedType("")
       router.refresh()
     } catch {
       toast.error("가족 추가에 실패했습니다")
@@ -98,12 +170,19 @@ export function FamilyGroupSection({ customer, familyMembers }: FamilyGroupSecti
                     href={`/admin/customers/${member.id}`}
                     className="flex-1 hover:underline"
                   >
-                    <p className="font-medium">
-                      {member.name}
-                      {member.is_primary && (
-                        <Badge variant="secondary" className="ml-2 text-xs">주 고객</Badge>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">
+                        {member.name}
+                        {member.is_primary && (
+                          <Badge variant="secondary" className="ml-2 text-xs">주 고객</Badge>
+                        )}
+                      </p>
+                      {relationshipMap.has(member.id) && (
+                        <Badge variant="outline" className="text-xs">
+                          {relationshipMap.get(member.id)}
+                        </Badge>
                       )}
-                    </p>
+                    </div>
                     <p className="text-sm text-muted-foreground">
                       {formatDate(member.birth_date)}
                       {calculateAge(member.birth_date) != null && ` (${calculateAge(member.birth_date)}세)`}
@@ -142,6 +221,51 @@ export function FamilyGroupSection({ customer, familyMembers }: FamilyGroupSecti
         excludeIds={excludeIds}
         title="가족 추가"
       />
+
+      <Dialog open={typeDialogOpen} onOpenChange={setTypeDialogOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>가족 관계 설정</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {selectedMember && (
+              <p className="text-sm">
+                <span className="font-medium">{selectedMember.name}</span>님은 나의
+              </p>
+            )}
+            <div className="grid grid-cols-4 gap-2">
+              {FAMILY_RELATIONSHIP_TYPES.map((type) => (
+                <button
+                  key={type}
+                  onClick={() => setSelectedType(type)}
+                  className={`rounded-md border px-3 py-2 text-sm transition-colors ${
+                    selectedType === type
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "hover:bg-muted"
+                  }`}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setTypeDialogOpen(false)
+                setSelectedMember(null)
+                setSelectedType("")
+              }}
+            >
+              취소
+            </Button>
+            <Button onClick={confirmAddMember} disabled={!selectedType}>
+              추가
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

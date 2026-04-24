@@ -29,9 +29,20 @@ import type { Occupation } from "@/lib/data/occupations"
 import type { Customer } from "@/types/customer"
 import { toast } from "sonner"
 
-const RELATIONSHIP_TYPES = [
-  "배우자", "자녀", "부모", "형제", "지인", "소개인", "동료", "기타",
-]
+const FAMILY_RELATIONSHIP_TYPES = ["배우자", "자녀", "부모", "형제"]
+const RELATIONSHIP_TYPES = ["지인", "소개인", "동료", "기타"]
+
+const INVERSE_TYPE: Record<string, string> = {
+  자녀: "부모",
+  부모: "자녀",
+  배우자: "배우자",
+  형제: "형제",
+}
+
+type PendingFamily = {
+  customer: Customer
+  relationshipType: string
+}
 
 type PendingRelation = {
   customer: Customer
@@ -50,8 +61,11 @@ export function CustomerForm({ customer, mode, familyMembers = [] }: CustomerFor
   const [occupationSearchOpen, setOccupationSearchOpen] = useState(false)
 
   // create 모드 - 가족 임시 목록
-  const [pendingFamily, setPendingFamily] = useState<Customer[]>([])
+  const [pendingFamily, setPendingFamily] = useState<PendingFamily[]>([])
   const [famSearchOpen, setFamSearchOpen] = useState(false)
+  const [famTypeDialogOpen, setFamTypeDialogOpen] = useState(false)
+  const [famSelectedMember, setFamSelectedMember] = useState<Customer | null>(null)
+  const [famSelectedType, setFamSelectedType] = useState("")
 
   // create 모드 - 관계인 임시 목록
   const [pendingRelations, setPendingRelations] = useState<PendingRelation[]>([])
@@ -142,10 +156,23 @@ export function CustomerForm({ customer, mode, familyMembers = [] }: CustomerFor
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               name: `${data.name} 가족`,
-              member_ids: [newCustomerId, ...pendingFamily.map((m) => m.id)],
+              member_ids: [newCustomerId, ...pendingFamily.map((f) => f.customer.id)],
               primary_id: newCustomerId,
             }),
           })
+          await Promise.allSettled(
+            pendingFamily.map((f) =>
+              fetch("/api/relationships", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  customer_id: newCustomerId,
+                  related_customer_id: f.customer.id,
+                  relationship_type: f.relationshipType,
+                }),
+              })
+            )
+          )
         }
 
         if (mode === "create" && pendingRelations.length > 0) {
@@ -394,19 +421,27 @@ export function CustomerForm({ customer, mode, familyMembers = [] }: CustomerFor
                 <p className="text-sm text-muted-foreground">등록할 가족 구성원을 추가하세요</p>
               ) : (
                 <div className="space-y-2">
-                  {pendingFamily.map((m) => (
+                  {pendingFamily.map((f) => (
                     <div
-                      key={m.id}
+                      key={f.customer.id}
                       className="flex items-center justify-between rounded-md border p-3"
                     >
-                      <p className="font-medium text-sm">{m.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-sm">{f.customer.name}</p>
+                        <Badge variant="outline" className="text-xs">{f.relationshipType}</Badge>
+                        {INVERSE_TYPE[f.relationshipType] && (
+                          <span className="text-xs text-muted-foreground">
+                            ({f.customer.name}님 기준: {INVERSE_TYPE[f.relationshipType]})
+                          </span>
+                        )}
+                      </div>
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-muted-foreground hover:text-destructive"
                         onClick={() =>
-                          setPendingFamily((prev) => prev.filter((x) => x.id !== m.id))
+                          setPendingFamily((prev) => prev.filter((x) => x.customer.id !== f.customer.id))
                         }
                       >
                         <X className="h-3.5 w-3.5" />
@@ -492,12 +527,70 @@ export function CustomerForm({ customer, mode, familyMembers = [] }: CustomerFor
             open={famSearchOpen}
             onOpenChange={setFamSearchOpen}
             onSelect={(customer) => {
-              setPendingFamily((prev) => [...prev, customer])
+              setFamSelectedMember(customer)
               setFamSearchOpen(false)
+              setFamTypeDialogOpen(true)
             }}
-            excludeIds={pendingFamily.map((m) => m.id)}
+            excludeIds={pendingFamily.map((f) => f.customer.id)}
             title="가족 추가"
           />
+          <Dialog open={famTypeDialogOpen} onOpenChange={setFamTypeDialogOpen}>
+            <DialogContent className="sm:max-w-sm">
+              <DialogHeader>
+                <DialogTitle>가족 관계 설정</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                {famSelectedMember && (
+                  <p className="text-sm">
+                    <span className="font-medium">{famSelectedMember.name}</span>님은 나의
+                  </p>
+                )}
+                <div className="grid grid-cols-4 gap-2">
+                  {FAMILY_RELATIONSHIP_TYPES.map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setFamSelectedType(type)}
+                      className={`rounded-md border px-3 py-2 text-sm transition-colors ${
+                        famSelectedType === type
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "hover:bg-muted"
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setFamTypeDialogOpen(false)
+                    setFamSelectedMember(null)
+                    setFamSelectedType("")
+                  }}
+                >
+                  취소
+                </Button>
+                <Button
+                  disabled={!famSelectedType}
+                  onClick={() => {
+                    if (!famSelectedMember || !famSelectedType) return
+                    setPendingFamily((prev) => [
+                      ...prev,
+                      { customer: famSelectedMember, relationshipType: famSelectedType },
+                    ])
+                    setFamTypeDialogOpen(false)
+                    setFamSelectedMember(null)
+                    setFamSelectedType("")
+                  }}
+                >
+                  추가
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           <CustomerSearchDialog
             open={relSearchOpen}
             onOpenChange={setRelSearchOpen}
