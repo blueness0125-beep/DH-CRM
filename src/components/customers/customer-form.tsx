@@ -18,7 +18,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { ArrowLeft, Save, Loader2, Search, Link2, Plus, X } from "lucide-react"
+import { ArrowLeft, Save, Loader2, Search, Link2, Users, UserPlus, Plus, X } from "lucide-react"
 import { AddressSearchButton, type AddressResult } from "@/components/shared/address-search-dialog"
 import { OccupationSearchDialog } from "@/components/shared/occupation-search-dialog"
 import { CustomerSearchDialog } from "@/components/shared/customer-search-dialog"
@@ -48,6 +48,10 @@ export function CustomerForm({ customer, mode, familyMembers = [] }: CustomerFor
   const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [occupationSearchOpen, setOccupationSearchOpen] = useState(false)
+
+  // create 모드 - 가족 임시 목록
+  const [pendingFamily, setPendingFamily] = useState<Customer[]>([])
+  const [famSearchOpen, setFamSearchOpen] = useState(false)
 
   // create 모드 - 관계인 임시 목록
   const [pendingRelations, setPendingRelations] = useState<PendingRelation[]>([])
@@ -131,6 +135,18 @@ export function CustomerForm({ customer, mode, familyMembers = [] }: CustomerFor
       if (res.ok) {
         const json = await res.json()
         const newCustomerId = json.data.id
+
+        if (mode === "create" && pendingFamily.length > 0) {
+          await fetch("/api/family-groups", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: `${data.name} 가족`,
+              member_ids: [newCustomerId, ...pendingFamily.map((m) => m.id)],
+              primary_id: newCustomerId,
+            }),
+          })
+        }
 
         if (mode === "create" && pendingRelations.length > 0) {
           await Promise.allSettled(
@@ -352,6 +368,57 @@ export function CustomerForm({ customer, mode, familyMembers = [] }: CustomerFor
           </CardContent>
         </Card>
 
+        {/* Family - create mode only */}
+        {mode === "create" && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Users className="h-4 w-4" />
+                가족 구성원
+                {pendingFamily.length > 0 && (
+                  <Badge variant="secondary" className="text-xs">{pendingFamily.length}</Badge>
+                )}
+              </CardTitle>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setFamSearchOpen(true)}
+              >
+                <UserPlus className="mr-1 h-3.5 w-3.5" />
+                가족 추가
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {pendingFamily.length === 0 ? (
+                <p className="text-sm text-muted-foreground">등록할 가족 구성원을 추가하세요</p>
+              ) : (
+                <div className="space-y-2">
+                  {pendingFamily.map((m) => (
+                    <div
+                      key={m.id}
+                      className="flex items-center justify-between rounded-md border p-3"
+                    >
+                      <p className="font-medium text-sm">{m.name}</p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        onClick={() =>
+                          setPendingFamily((prev) => prev.filter((x) => x.id !== m.id))
+                        }
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Relationships - create mode only */}
         {mode === "create" && (
           <Card>
@@ -418,9 +485,19 @@ export function CustomerForm({ customer, mode, familyMembers = [] }: CustomerFor
         </div>
       </form>
 
-      {/* Dialogs for create mode relationship selection */}
+      {/* Dialogs for create mode */}
       {mode === "create" && (
         <>
+          <CustomerSearchDialog
+            open={famSearchOpen}
+            onOpenChange={setFamSearchOpen}
+            onSelect={(customer) => {
+              setPendingFamily((prev) => [...prev, customer])
+              setFamSearchOpen(false)
+            }}
+            excludeIds={pendingFamily.map((m) => m.id)}
+            title="가족 추가"
+          />
           <CustomerSearchDialog
             open={relSearchOpen}
             onOpenChange={setRelSearchOpen}
