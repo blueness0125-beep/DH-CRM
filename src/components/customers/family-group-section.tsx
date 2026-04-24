@@ -19,7 +19,7 @@ import { formatPhone, formatDate, calculateAge } from "@/lib/utils/format"
 import type { Customer } from "@/types/customer"
 import { toast } from "sonner"
 
-const FAMILY_RELATIONSHIP_TYPES = ["배우자", "자녀", "부모", "형제"]
+const FAMILY_RELATIONSHIP_TYPES = ["배우자", "자녀", "부모", "형제", "친척"]
 
 // 역방향 관계 표시용 (A가 B의 자녀면, B는 A의 부모)
 const INVERSE_TYPE: Record<string, string> = {
@@ -27,6 +27,7 @@ const INVERSE_TYPE: Record<string, string> = {
   부모: "자녀",
   배우자: "배우자",
   형제: "형제",
+  친척: "친척",
 }
 
 type RelationshipRecord = {

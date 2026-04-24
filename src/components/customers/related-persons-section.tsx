@@ -21,7 +21,7 @@ import { formatPhone, formatDate, calculateAge } from "@/lib/utils/format"
 import type { Customer } from "@/types/customer"
 import { toast } from "sonner"
 
-const FAMILY_RELATIONSHIP_TYPES = new Set(["배우자", "자녀", "부모", "형제"])
+const FAMILY_RELATIONSHIP_TYPES = new Set(["배우자", "자녀", "부모", "형제", "친척"])
 
 const RELATIONSHIP_TYPES = ["지인", "소개인", "동료", "기타"]
 

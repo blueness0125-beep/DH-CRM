@@ -29,7 +29,7 @@ import type { Occupation } from "@/lib/data/occupations"
 import type { Customer } from "@/types/customer"
 import { toast } from "sonner"
 
-const FAMILY_RELATIONSHIP_TYPES = ["배우자", "자녀", "부모", "형제"]
+const FAMILY_RELATIONSHIP_TYPES = ["배우자", "자녀", "부모", "형제", "친척"]
 const RELATIONSHIP_TYPES = ["지인", "소개인", "동료", "기타"]
 
 const INVERSE_TYPE: Record<string, string> = {
@@ -37,6 +37,7 @@ const INVERSE_TYPE: Record<string, string> = {
   부모: "자녀",
   배우자: "배우자",
   형제: "형제",
+  친척: "친척",
 }
 
 type PendingFamily = {
