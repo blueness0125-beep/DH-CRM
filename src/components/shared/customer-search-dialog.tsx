@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
@@ -50,11 +50,14 @@ export function CustomerSearchDialog({
     }
   }, [excludeIds])
 
-  function handleQueryChange(value: string) {
-    setQuery(value)
-    const timer = setTimeout(() => search(value), 300)
+  useEffect(() => {
+    if (query.length < 1) {
+      setResults([])
+      return
+    }
+    const timer = setTimeout(() => search(query), 300)
     return () => clearTimeout(timer)
-  }
+  }, [query, search])
 
   function handleSelect(customer: Customer) {
     onSelect(customer)
@@ -75,7 +78,7 @@ export function CustomerSearchDialog({
             <Input
               placeholder="이름 또는 전화번호 검색..."
               value={query}
-              onChange={(e) => handleQueryChange(e.target.value)}
+              onChange={(e) => setQuery(e.target.value)}
               className="pl-9"
               autoFocus
             />

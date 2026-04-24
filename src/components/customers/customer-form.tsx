@@ -10,15 +10,33 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { ArrowLeft, Save, Loader2, Search } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import { ArrowLeft, Save, Loader2, Search, Link2, Plus, X } from "lucide-react"
 import { AddressSearchButton, type AddressResult } from "@/components/shared/address-search-dialog"
 import { OccupationSearchDialog } from "@/components/shared/occupation-search-dialog"
+import { CustomerSearchDialog } from "@/components/shared/customer-search-dialog"
 import { FamilyGroupSection } from "@/components/customers/family-group-section"
 import { RelatedPersonsSection } from "@/components/customers/related-persons-section"
 import { customerCreateSchema, type CustomerCreate } from "@/lib/validators/customer-schema"
 import type { Occupation } from "@/lib/data/occupations"
 import type { Customer } from "@/types/customer"
 import { toast } from "sonner"
+
+const RELATIONSHIP_TYPES = [
+  "배우자", "자녀", "부모", "형제", "지인", "소개인", "동료", "기타",
+]
+
+type PendingRelation = {
+  customer: Customer
+  relationshipType: string
+}
 
 type CustomerFormProps = {
   customer?: Customer
@@ -29,8 +47,14 @@ type CustomerFormProps = {
 export function CustomerForm({ customer, mode, familyMembers = [] }: CustomerFormProps) {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
-
   const [occupationSearchOpen, setOccupationSearchOpen] = useState(false)
+
+  // create 모드 - 관계인 임시 목록
+  const [pendingRelations, setPendingRelations] = useState<PendingRelation[]>([])
+  const [relSearchOpen, setRelSearchOpen] = useState(false)
+  const [relTypeDialogOpen, setRelTypeDialogOpen] = useState(false)
+  const [relSelectedCustomer, setRelSelectedCustomer] = useState<Customer | null>(null)
+  const [relSelectedType, setRelSelectedType] = useState("")
 
   const {
     register,
@@ -106,8 +130,26 @@ export function CustomerForm({ customer, mode, familyMembers = [] }: CustomerFor
 
       if (res.ok) {
         const json = await res.json()
+        const newCustomerId = json.data.id
+
+        if (mode === "create" && pendingRelations.length > 0) {
+          await Promise.allSettled(
+            pendingRelations.map((r) =>
+              fetch("/api/relationships", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  customer_id: newCustomerId,
+                  related_customer_id: r.customer.id,
+                  relationship_type: r.relationshipType,
+                }),
+              })
+            )
+          )
+        }
+
         toast.success(mode === "create" ? "고객이 등록되었습니다" : "고객 정보가 수정되었습니다")
-        router.push(`/admin/customers/${json.data.id}`)
+        router.push(`/admin/customers/${newCustomerId}`)
         router.refresh()
       } else {
         toast.error("저장에 실패했습니다")
@@ -310,6 +352,60 @@ export function CustomerForm({ customer, mode, familyMembers = [] }: CustomerFor
           </CardContent>
         </Card>
 
+        {/* Relationships - create mode only */}
+        {mode === "create" && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Link2 className="h-4 w-4" />
+                관계인
+                {pendingRelations.length > 0 && (
+                  <Badge variant="secondary" className="text-xs">{pendingRelations.length}</Badge>
+                )}
+              </CardTitle>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setRelSearchOpen(true)}
+              >
+                <Plus className="mr-1 h-3.5 w-3.5" />
+                관계인 추가
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {pendingRelations.length === 0 ? (
+                <p className="text-sm text-muted-foreground">등록할 관계인을 추가하세요</p>
+              ) : (
+                <div className="space-y-2">
+                  {pendingRelations.map((r) => (
+                    <div
+                      key={r.customer.id}
+                      className="flex items-center justify-between rounded-md border p-3"
+                    >
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-sm">{r.customer.name}</p>
+                        <Badge variant="outline" className="text-xs">{r.relationshipType}</Badge>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        onClick={() =>
+                          setPendingRelations((prev) => prev.filter((x) => x.customer.id !== r.customer.id))
+                        }
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Submit */}
         <div className="flex justify-end gap-3">
           <Button type="button" variant="outline" onClick={() => router.back()}>
@@ -322,6 +418,80 @@ export function CustomerForm({ customer, mode, familyMembers = [] }: CustomerFor
         </div>
       </form>
 
+      {/* Dialogs for create mode relationship selection */}
+      {mode === "create" && (
+        <>
+          <CustomerSearchDialog
+            open={relSearchOpen}
+            onOpenChange={setRelSearchOpen}
+            onSelect={(customer) => {
+              setRelSelectedCustomer(customer)
+              setRelSearchOpen(false)
+              setRelTypeDialogOpen(true)
+            }}
+            excludeIds={pendingRelations.map((r) => r.customer.id)}
+            title="관계인 검색"
+          />
+          <Dialog open={relTypeDialogOpen} onOpenChange={setRelTypeDialogOpen}>
+            <DialogContent className="sm:max-w-sm">
+              <DialogHeader>
+                <DialogTitle>관계 설정</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                {relSelectedCustomer && (
+                  <p className="text-sm">
+                    <span className="font-medium">{relSelectedCustomer.name}</span>님과의 관계를 선택해주세요
+                  </p>
+                )}
+                <div className="grid grid-cols-4 gap-2">
+                  {RELATIONSHIP_TYPES.map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setRelSelectedType(type)}
+                      className={`rounded-md border px-3 py-2 text-sm transition-colors ${
+                        relSelectedType === type
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "hover:bg-muted"
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setRelTypeDialogOpen(false)
+                    setRelSelectedCustomer(null)
+                    setRelSelectedType("")
+                  }}
+                >
+                  취소
+                </Button>
+                <Button
+                  disabled={!relSelectedType}
+                  onClick={() => {
+                    if (!relSelectedCustomer || !relSelectedType) return
+                    setPendingRelations((prev) => [
+                      ...prev,
+                      { customer: relSelectedCustomer, relationshipType: relSelectedType },
+                    ])
+                    setRelTypeDialogOpen(false)
+                    setRelSelectedCustomer(null)
+                    setRelSelectedType("")
+                  }}
+                >
+                  추가
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
+
       {/* Family & Relationships - edit mode only */}
       {mode === "edit" && customer && (
         <>
@@ -329,13 +499,6 @@ export function CustomerForm({ customer, mode, familyMembers = [] }: CustomerFor
           <FamilyGroupSection customer={customer} familyMembers={familyMembers} />
           <RelatedPersonsSection customerId={customer.id} />
         </>
-      )}
-
-      {/* Create mode: guide message */}
-      {mode === "create" && (
-        <p className="text-center text-sm text-muted-foreground">
-          저장 후 고객 상세 화면에서 가족 구성원 및 관계인을 설정할 수 있습니다.
-        </p>
       )}
     </div>
   )
