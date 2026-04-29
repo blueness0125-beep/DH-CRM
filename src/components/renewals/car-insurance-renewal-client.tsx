@@ -59,12 +59,18 @@ function urgencyBadge(fullRenewalDate: string) {
   return <Badge variant="outline" className="text-blue-600 border-blue-300">D-{diff}</Badge>
 }
 
+function todayLocalString() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+}
+
 export function CarInsuranceRenewalClient() {
   const [activeFilter, setActiveFilter] = useState("upcoming45")
   const [data, setData] = useState<CarInsuranceEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const todayStr = todayLocalString()
 
   const load = useCallback(() => {
     setLoading(true)
@@ -143,7 +149,10 @@ export function CarInsuranceRenewalClient() {
               {data.map((item) => {
                 const isExpanded = expandedId === item.등록번호
                 const phone = item.customers?.phone || item.연락처
-                const hasContract = (item.car_insurance_contracts?.length ?? 0) > 0
+                // 만기일이 지나지 않은 계약(또는 만기일 미입력)만 활성 계약으로 본다
+                const hasContract = (item.car_insurance_contracts ?? []).some(
+                  (c) => !c.만기일 || c.만기일 >= todayStr
+                )
                 const vehicleSummary = item.차량정보?.split("\n")[0] ?? ""
 
                 return (

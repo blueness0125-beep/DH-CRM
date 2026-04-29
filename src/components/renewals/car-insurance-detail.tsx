@@ -174,7 +174,13 @@ export function CarInsuranceDetail({ entry, onContractSaved }: Props) {
   const 가입정보 = parseUrls(entry.가입정보경로)
   const 비교표 = parseUrls(entry.비교표경로)
   const 이미지 = parseUrls(entry.이미지경로)
-  const contracts = entry.car_insurance_contracts ?? []
+  // 자동차보험은 1년 단위 계약. 만기일이 지난 계약은 더 이상 의미가 없으므로 숨김.
+  // 만기일이 비어있는 계약은 신규 입력 직후일 수 있으므로 노출 유지.
+  const today = new Date()
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`
+  const contracts = (entry.car_insurance_contracts ?? []).filter(
+    (c) => !c.만기일 || c.만기일 >= todayStr
+  )
   const stateChanged = editState !== (entry.상태 ?? "") || editMemo !== (entry.메모 ?? "")
 
   async function saveStatus() {
