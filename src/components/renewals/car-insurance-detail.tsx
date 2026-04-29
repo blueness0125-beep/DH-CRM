@@ -214,6 +214,22 @@ export function CarInsuranceDetail({ entry, onContractSaved }: Props) {
   return (
     <div className="border-t bg-muted/20 p-4 space-y-4">
 
+      {/* 계약 목록 — 계약이 있으면 최상단에 노출 */}
+      {contracts.length > 0 && (
+        <section className="space-y-2">
+          <SectionTitle>계약 완료 ({contracts.length}건)</SectionTitle>
+          {contracts.map((c, i) => (
+            <ContractCard
+              key={c.id}
+              contract={c}
+              index={i}
+              onEdit={() => openEdit(c)}
+              onDelete={onContractSaved}
+            />
+          ))}
+        </section>
+      )}
+
       {/* 상태 & 메모 */}
       <section className="rounded-lg border bg-background p-4 space-y-3">
         <SectionTitle>상태 및 메모</SectionTitle>
@@ -277,22 +293,6 @@ export function CarInsuranceDetail({ entry, onContractSaved }: Props) {
         <section className="rounded-lg border bg-background p-4 space-y-3">
           <SectionTitle>가입 보험 목록</SectionTitle>
           <MediaGrid urls={이미지} onClickImage={setLightboxSrc} />
-        </section>
-      )}
-
-      {/* 계약 목록 */}
-      {contracts.length > 0 && (
-        <section className="space-y-2">
-          <SectionTitle>계약 완료 ({contracts.length}건)</SectionTitle>
-          {contracts.map((c, i) => (
-            <ContractCard
-              key={c.id}
-              contract={c}
-              index={i}
-              onEdit={() => openEdit(c)}
-              onDelete={onContractSaved}
-            />
-          ))}
         </section>
       )}
 

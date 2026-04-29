@@ -92,6 +92,17 @@ export function CarInsuranceRenewalClient() {
 
   useEffect(() => { load() }, [load])
 
+  // 행을 펼칠 때 해당 행을 스크롤 컨테이너 상단으로 이동
+  // (다른 행을 펼치면 이전 행이 접히면서 레이아웃이 변하므로 펼쳐진 후 한 번 더 스크롤)
+  useEffect(() => {
+    if (!expandedId) return
+    const el = document.getElementById(`car-row-${expandedId}`)
+    if (!el) return
+    requestAnimationFrame(() => {
+      el.scrollIntoView({ behavior: "smooth", block: "start" })
+    })
+  }, [expandedId])
+
   function toggleExpand(id: string) {
     setExpandedId((prev) => (prev === id ? null : id))
   }
@@ -156,7 +167,11 @@ export function CarInsuranceRenewalClient() {
                 const vehicleSummary = item.차량정보?.split("\n")[0] ?? ""
 
                 return (
-                  <div key={item.등록번호} className="border-b last:border-b-0">
+                  <div
+                    key={item.등록번호}
+                    id={`car-row-${item.등록번호}`}
+                    className="border-b last:border-b-0 scroll-mt-2"
+                  >
                     <div
                       className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/40 transition-colors"
                       onClick={() => toggleExpand(item.등록번호)}
