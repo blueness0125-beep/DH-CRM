@@ -22,6 +22,7 @@ const navItems: NavItem[] = [
     children: [
       { href: "/admin/renewals", label: "일반 갱신" },
       { href: "/admin/renewals/car-insurance", label: "자동차보험 갱신" },
+      { href: "/admin/car-insurance/new", label: "자동차보험 신규 등록" },
     ],
   },
   { href: "/admin/settings", label: "설정", icon: Settings },
