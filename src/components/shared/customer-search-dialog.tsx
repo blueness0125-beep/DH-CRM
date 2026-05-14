@@ -20,11 +20,13 @@ type CustomerSearchDialogProps = {
   title?: string
 }
 
+const EMPTY_EXCLUDE_IDS: readonly string[] = []
+
 export function CustomerSearchDialog({
   open,
   onOpenChange,
   onSelect,
-  excludeIds = [],
+  excludeIds = EMPTY_EXCLUDE_IDS as string[],
   title = "고객 검색",
 }: CustomerSearchDialogProps) {
   const [query, setQuery] = useState("")

@@ -294,16 +294,20 @@ export function NewCarInsuranceForm() {
 
   const status = watchedStatus ?? STATUS_OPTIONS[0]
 
-  // 고객 미선택 시 — 검색만 노출
-  if (!customer) {
-    return (
-      <div className="space-y-4">
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start justify-between gap-2">
         <div>
           <h1 className="text-2xl font-bold">자동차보험 신규 등록</h1>
           <p className="text-sm text-muted-foreground">
-            먼저 자동차보험을 등록할 기존 고객을 선택해주세요.
+            {customer
+              ? "① 영역에 가입정보 이미지를 Ctrl+V 하면 AI가 자동 분석합니다."
+              : "먼저 자동차보험을 등록할 기존 고객을 선택해주세요."}
           </p>
         </div>
+      </div>
+
+      {!customer ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center gap-3 py-12">
             {loadingCustomer ? (
@@ -320,29 +324,10 @@ export function NewCarInsuranceForm() {
             )}
           </CardContent>
         </Card>
-        <CustomerSearchDialog
-          open={searchOpen}
-          onOpenChange={setSearchOpen}
-          onSelect={selectCustomer}
-          title="자동차보험을 등록할 고객 선택"
-        />
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-bold">자동차보험 신규 등록</h1>
-          <p className="text-sm text-muted-foreground">
-            ① 영역에 가입정보 이미지를 Ctrl+V 하면 AI가 자동 분석합니다.
-          </p>
-        </div>
-      </div>
-
-      {/* 선택된 고객 정보 (읽기 전용) */}
-      <Card className="border-primary/40 bg-primary/5">
+      ) : (
+        <>
+          {/* 선택된 고객 정보 (읽기 전용) */}
+          <Card className="border-primary/40 bg-primary/5">
         <CardContent className="flex flex-wrap items-center justify-between gap-3 py-3">
           <div className="flex items-center gap-3">
             <UserCheck className="h-5 w-5 text-primary" />
@@ -504,6 +489,8 @@ export function NewCarInsuranceForm() {
           </Button>
         </div>
       </form>
+        </>
+      )}
 
       <CustomerSearchDialog
         open={searchOpen}
