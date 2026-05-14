@@ -1,3 +1,5 @@
+import { Suspense } from "react"
+import { Loader2 } from "lucide-react"
 import { NewCarInsuranceForm } from "@/components/car-insurance/new-registration-form"
 
 export const metadata = {
@@ -5,5 +7,15 @@ export const metadata = {
 }
 
 export default function NewCarInsurancePage() {
-  return <NewCarInsuranceForm />
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-64 items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
+      <NewCarInsuranceForm />
+    </Suspense>
+  )
 }
