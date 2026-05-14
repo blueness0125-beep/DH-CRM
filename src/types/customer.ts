@@ -70,6 +70,7 @@ export type CarInsurance = {
   이미지경로: string | null
   메모: string | null
   customer_id: string
+  car_insurance_contracts?: import("./car-insurance").CarInsuranceContract[]
 }
 
 export type InsuranceProduct = {

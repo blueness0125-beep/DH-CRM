@@ -18,23 +18,45 @@ import {
   CreditCard,
   Users,
   Car,
+  Plus,
+  ExternalLink,
 } from "lucide-react"
 import { formatPhone, formatDate, calculateAge, formatGender } from "@/lib/utils/format"
 import { FamilyGroupSection } from "@/components/customers/family-group-section"
 import { RelatedPersonsSection } from "@/components/customers/related-persons-section"
 import { ConsultationLogSection } from "@/components/customers/consultation-log-section"
 import { ConsultationLogForm } from "@/components/customers/consultation-log-form"
-import type { Customer } from "@/types/customer"
+import type { Customer, CarInsurance } from "@/types/customer"
+import type { CarInsuranceContract } from "@/types/car-insurance"
 
 type CustomerDetailProps = {
-  customer: Customer
+  customer: Customer & { car_insurance_data?: CarInsurance[] }
   familyMembers: Customer[] | null
 }
 
-function InfoRow({ label, value, href }: { label: string; value: string; href?: string }) {
-  if (!value || value === "-") return null
+function GridCell({ label, value, href }: { label: string; value: string; href?: string }) {
   return (
-    <div className="flex flex-col gap-0.5 py-2">
+    <div className="space-y-0.5">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      {value && value !== "-" ? (
+        href ? (
+          <a href={href} className="text-sm font-medium text-primary underline-offset-4 hover:underline">
+            {value}
+          </a>
+        ) : (
+          <p className="text-sm font-medium">{value}</p>
+        )
+      ) : (
+        <p className="text-sm text-muted-foreground">-</p>
+      )}
+    </div>
+  )
+}
+
+function Row({ label, value, href }: { label: string; value: string | null | undefined; href?: string }) {
+  if (!value) return null
+  return (
+    <div className="flex flex-col gap-0.5 py-1.5">
       <span className="text-xs text-muted-foreground">{label}</span>
       {href ? (
         <a href={href} className="text-sm font-medium text-primary underline-offset-4 hover:underline">
@@ -47,11 +69,43 @@ function InfoRow({ label, value, href }: { label: string; value: string; href?: 
   )
 }
 
+function todayLocalString() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+}
+
+function formatWon(n: number | null): string {
+  if (n == null) return "-"
+  return n.toLocaleString("ko-KR") + "원"
+}
+
+function splitUrlList(value: string | null | undefined): string[] {
+  if (!value) return []
+  return value.split("\n").map((s) => s.trim()).filter(Boolean)
+}
+
 export function CustomerDetail({ customer, familyMembers }: CustomerDetailProps) {
   const router = useRouter()
   const isCorporate = customer.customer_type === "corporate"
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+
+  const carInsurance = customer.car_insurance_data?.[0]
+  const todayStr = todayLocalString()
+  const activeContracts: CarInsuranceContract[] = (carInsurance?.car_insurance_contracts ?? []).filter(
+    (c) => !c.만기일 || c.만기일 >= todayStr,
+  )
+
+  const hasWorkInfo =
+    customer.work_company_name ||
+    customer.work_address ||
+    customer.job_category ||
+    customer.job_name ||
+    customer.job_risk_grade
+
+  const policyDocUrls = splitUrlList(carInsurance?.가입정보경로)
+  const compareDocUrls = splitUrlList(carInsurance?.비교표경로)
+  const otherImageUrls = splitUrlList(carInsurance?.이미지경로)
 
   return (
     <div className="space-y-6">
@@ -116,22 +170,7 @@ export function CustomerDetail({ customer, familyMembers }: CustomerDetailProps)
       <ConsultationLogSection customerId={customer.id} refreshKey={refreshKey} />
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Contact */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Phone className="h-4 w-4" />
-              연락처
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1">
-            <InfoRow label="전화번호" value={formatPhone(customer.phone)} href={`tel:${customer.phone}`} />
-            <InfoRow label="전화번호 2" value={formatPhone(customer.phone_2)} href={`tel:${customer.phone_2}`} />
-            <InfoRow label="이메일" value={customer.email ?? ""} href={`mailto:${customer.email}`} />
-          </CardContent>
-        </Card>
-
-        {/* Personal / Corporate */}
+        {/* 통합 개인 정보 */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
@@ -139,79 +178,102 @@ export function CustomerDetail({ customer, familyMembers }: CustomerDetailProps)
               {isCorporate ? "법인 정보" : "개인 정보"}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-1">
+          <CardContent className="space-y-4">
             {isCorporate ? (
-              <InfoRow label="사업자등록번호" value={customer.business_number ?? ""} />
+              <>
+                <GridCell label="사업자등록번호" value={customer.business_number ?? ""} />
+                <GridCell label="전화번호" value={formatPhone(customer.phone)} href={customer.phone ? `tel:${customer.phone}` : undefined} />
+                <GridCell label="전화번호 2" value={formatPhone(customer.phone_2)} href={customer.phone_2 ? `tel:${customer.phone_2}` : undefined} />
+                <GridCell label="이메일" value={customer.email ?? ""} href={customer.email ? `mailto:${customer.email}` : undefined} />
+              </>
             ) : (
               <>
-                <InfoRow label="생년월일" value={formatDate(customer.birth_date)} />
-                <InfoRow label="성별" value={formatGender(customer.gender)} />
-                <InfoRow label="주민번호 뒷자리" value={customer.ssn_back ?? ""} />
+                {/* 2x2 그리드: 생년월일 / 주민번호 뒷자리 / 성별 / 전화번호 */}
+                <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                  <GridCell label="생년월일" value={formatDate(customer.birth_date)} />
+                  <GridCell label="주민번호 뒷자리" value={customer.ssn_back ?? ""} />
+                  <GridCell label="성별" value={formatGender(customer.gender)} />
+                  <GridCell
+                    label="전화번호"
+                    value={formatPhone(customer.phone)}
+                    href={customer.phone ? `tel:${customer.phone}` : undefined}
+                  />
+                </div>
+                {(customer.phone_2 || customer.email) && (
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-3 pt-1">
+                    {customer.phone_2 && (
+                      <GridCell
+                        label="전화번호 2"
+                        value={formatPhone(customer.phone_2)}
+                        href={`tel:${customer.phone_2}`}
+                      />
+                    )}
+                    {customer.email && (
+                      <GridCell label="이메일" value={customer.email} href={`mailto:${customer.email}`} />
+                    )}
+                  </div>
+                )}
               </>
             )}
-          </CardContent>
-        </Card>
 
-        {/* Home Address */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <MapPin className="h-4 w-4" />
-              자택 주소
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {customer.home_address ? (
-              <div className="space-y-1">
-                {customer.home_zonecode && (
-                  <p className="text-xs text-muted-foreground">{customer.home_zonecode}</p>
+            {/* 자택 주소 */}
+            <div className="space-y-1.5 border-t pt-3">
+              <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                <MapPin className="h-3.5 w-3.5" />
+                자택 주소
+              </p>
+              {customer.home_address ? (
+                <div className="space-y-0.5">
+                  {customer.home_zonecode && (
+                    <p className="text-xs text-muted-foreground">{customer.home_zonecode}</p>
+                  )}
+                  <p className="text-sm">{customer.home_address}</p>
+                  {customer.home_address_detail && (
+                    <p className="text-sm">{customer.home_address_detail}</p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">등록된 주소 없음</p>
+              )}
+            </div>
+
+            {/* 직장 정보 (개인) / 법인 주소 (법인) */}
+            {(hasWorkInfo || isCorporate) && (
+              <div className="space-y-1.5 border-t pt-3">
+                <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                  <Briefcase className="h-3.5 w-3.5" />
+                  {isCorporate ? "법인 주소" : "직장 정보"}
+                </p>
+                {!isCorporate && customer.work_company_name && (
+                  <Row label="회사명" value={customer.work_company_name} />
                 )}
-                <p className="text-sm">{customer.home_address}</p>
-                {customer.home_address_detail && (
-                  <p className="text-sm">{customer.home_address_detail}</p>
+                {customer.work_address && (
+                  <div className="space-y-0.5 py-1">
+                    <span className="text-xs text-muted-foreground">
+                      {isCorporate ? "주소" : "직장 주소"}
+                    </span>
+                    {customer.work_zonecode && (
+                      <p className="text-xs text-muted-foreground">{customer.work_zonecode}</p>
+                    )}
+                    <p className="text-sm">{customer.work_address}</p>
+                    {customer.work_address_detail && (
+                      <p className="text-sm">{customer.work_address_detail}</p>
+                    )}
+                  </div>
+                )}
+                {!isCorporate && (
+                  <>
+                    <Row label="직업 분류" value={customer.job_category} />
+                    <Row label="직업명" value={customer.job_name} />
+                    <Row label="위험등급" value={customer.job_risk_grade} />
+                  </>
                 )}
               </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">등록된 주소 없음</p>
             )}
           </CardContent>
         </Card>
 
-        {/* Work Address - 개인만 직업 정보 표시, 법인은 직장 주소만 */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Briefcase className="h-4 w-4" />
-              {isCorporate ? "법인 주소" : "직장 정보"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {!isCorporate && <InfoRow label="회사명" value={customer.work_company_name ?? ""} />}
-            {customer.work_address && (
-              <div className="space-y-1 py-2">
-                <span className="text-xs text-muted-foreground">
-                  {isCorporate ? "주소" : "직장 주소"}
-                </span>
-                {customer.work_zonecode && (
-                  <p className="text-xs text-muted-foreground">{customer.work_zonecode}</p>
-                )}
-                <p className="text-sm">{customer.work_address}</p>
-                {customer.work_address_detail && (
-                  <p className="text-sm">{customer.work_address_detail}</p>
-                )}
-              </div>
-            )}
-            {!isCorporate && (
-              <>
-                <InfoRow label="직업 분류" value={customer.job_category ?? ""} />
-                <InfoRow label="직업명" value={customer.job_name ?? ""} />
-                <InfoRow label="위험등급" value={customer.job_risk_grade ?? ""} />
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Bank */}
+        {/* 계좌 정보 */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
@@ -220,41 +282,140 @@ export function CustomerDetail({ customer, familyMembers }: CustomerDetailProps)
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
-            <InfoRow label="은행" value={customer.bank_name ?? ""} />
-            <InfoRow label="계좌번호" value={customer.bank_account ?? ""} />
-            <InfoRow label="예금주" value={customer.bank_holder ?? ""} />
-          </CardContent>
-        </Card>
-
-        {/* Car Insurance */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Car className="h-4 w-4" />
-              자동차보험
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1">
-            <InfoRow
-              label="갱신일 (월-일)"
-              value={((customer as any).car_insurance_data?.[0]?.갱신일) || "미등록"}
-            />
-            <InfoRow
-              label="상태"
-              value={((customer as any).car_insurance_data?.[0]?.상태) || "미등록"}
-            />
-            {((customer as any).car_insurance_data?.[0]?.차량정보) && (
-              <div className="py-1">
-                <p className="text-xs text-muted-foreground mb-0.5">차량정보</p>
-                <p className="text-sm whitespace-pre-wrap">{(customer as any).car_insurance_data[0].차량정보}</p>
-              </div>
+            <Row label="은행" value={customer.bank_name} />
+            <Row label="계좌번호" value={customer.bank_account} />
+            <Row label="예금주" value={customer.bank_holder} />
+            {!customer.bank_name && !customer.bank_account && (
+              <p className="text-sm text-muted-foreground">등록된 계좌 없음</p>
             )}
           </CardContent>
         </Card>
 
-        {/* Memo */}
+        {/* 자동차보험 — 전체 정보 노출 */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Car className="h-4 w-4" />
+              자동차보험
+            </CardTitle>
+            {!carInsurance && (
+              <Link href={`/admin/car-insurance/new?customer_id=${customer.id}`}>
+                <Button size="sm" variant="outline">
+                  <Plus className="mr-1 h-3.5 w-3.5" />
+                  자동차보험 등록
+                </Button>
+              </Link>
+            )}
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {!carInsurance ? (
+              <p className="text-sm text-muted-foreground">등록된 자동차보험 정보가 없습니다.</p>
+            ) : (
+              <>
+                {/* 기본 정보: 갱신일/상태/관계인/등록번호 — 2x2 */}
+                <div className="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-4">
+                  <GridCell label="갱신일 (MM-DD)" value={carInsurance.갱신일 ?? "-"} />
+                  <GridCell label="상태" value={carInsurance.상태 ?? "-"} />
+                  <GridCell label="관계인" value={carInsurance.관계인 ?? "-"} />
+                  <GridCell label="등록번호" value={carInsurance.등록번호} />
+                </div>
+
+                {/* 차량 정보 (다중 차량 그대로) */}
+                {carInsurance.차량정보 && (
+                  <div className="space-y-1 border-t pt-3">
+                    <p className="text-xs font-semibold text-muted-foreground">차량 정보</p>
+                    <p className="whitespace-pre-wrap text-sm">{carInsurance.차량정보}</p>
+                  </div>
+                )}
+
+                {/* 계약 완료 — 가입일/만기일 포함 */}
+                {activeContracts.length > 0 && (
+                  <div className="space-y-2 border-t pt-3">
+                    <p className="text-xs font-semibold text-muted-foreground">
+                      계약 완료 ({activeContracts.length}건)
+                    </p>
+                    <div className="space-y-2">
+                      {activeContracts.map((c) => (
+                        <div key={c.id} className="rounded-md border bg-muted/30 p-3">
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2 md:grid-cols-4">
+                            <GridCell label="가입일" value={c.시작일 ?? "-"} />
+                            <GridCell label="만기일" value={c.만기일 ?? "-"} />
+                            <GridCell label="보험사" value={c.보험사 ?? "-"} />
+                            <GridCell label="채널" value={c.채널 ?? "-"} />
+                            <GridCell label="차량번호" value={c.차량번호 ?? "-"} />
+                            <GridCell label="증권번호" value={c.증권번호 ?? "-"} />
+                            <GridCell label="가입보험료" value={formatWon(c.가입보험료)} />
+                            <GridCell label="계약일" value={c.계약일} />
+                          </div>
+                          {(c.피보험자 || c.계약자 || c.설계자) && (
+                            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 border-t pt-2 text-xs text-muted-foreground">
+                              {c.피보험자 && <span>피보험자: {c.피보험자}</span>}
+                              {c.계약자 && <span>계약자: {c.계약자}</span>}
+                              {c.설계자 && <span>설계자: {c.설계자}</span>}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 비교 분석 내용 */}
+                {carInsurance.비교내용 && (
+                  <div className="space-y-1 border-t pt-3">
+                    <p className="text-xs font-semibold text-muted-foreground">비교 분석 내용</p>
+                    <p className="whitespace-pre-wrap text-sm">{carInsurance.비교내용}</p>
+                  </div>
+                )}
+
+                {/* 메모 */}
+                {carInsurance.메모 && (
+                  <div className="space-y-1 border-t pt-3">
+                    <p className="text-xs font-semibold text-muted-foreground">메모</p>
+                    <p className="whitespace-pre-wrap text-sm">{carInsurance.메모}</p>
+                  </div>
+                )}
+
+                {/* 첨부 링크 */}
+                {(policyDocUrls.length > 0 || compareDocUrls.length > 0 || otherImageUrls.length > 0) && (
+                  <div className="space-y-2 border-t pt-3">
+                    <p className="text-xs font-semibold text-muted-foreground">첨부 파일</p>
+                    <div className="flex flex-wrap gap-2">
+                      {policyDocUrls.map((url, i) => (
+                        <a key={url} href={url} target="_blank" rel="noreferrer">
+                          <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80">
+                            <ExternalLink className="mr-1 h-3 w-3" />
+                            가입정보 {i + 1}
+                          </Badge>
+                        </a>
+                      ))}
+                      {compareDocUrls.map((url, i) => (
+                        <a key={url} href={url} target="_blank" rel="noreferrer">
+                          <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80">
+                            <ExternalLink className="mr-1 h-3 w-3" />
+                            비교표 {i + 1}
+                          </Badge>
+                        </a>
+                      ))}
+                      {otherImageUrls.map((url, i) => (
+                        <a key={url} href={url} target="_blank" rel="noreferrer">
+                          <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80">
+                            <ExternalLink className="mr-1 h-3 w-3" />
+                            기타 이미지 {i + 1}
+                          </Badge>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* 메모 */}
         {customer.memo && (
-          <Card>
+          <Card className="lg:col-span-2">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">메모</CardTitle>
             </CardHeader>

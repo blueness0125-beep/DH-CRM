@@ -30,7 +30,7 @@ export class CustomerRepository {
   async findById(id: string) {
     const { data, error } = await this.supabase
       .from("customers")
-      .select("*, car_insurance_data(*)")
+      .select("*, car_insurance_data(*, car_insurance_contracts(*))")
       .eq("id", id)
       .single()
 

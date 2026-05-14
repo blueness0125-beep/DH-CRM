@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Button } from "@/components/ui/button"
@@ -25,13 +25,16 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog"
-import { Save, Loader2, Upload, X, ImageIcon, FileText } from "lucide-react"
+import { Save, Loader2, Upload, X, ImageIcon, FileText, Search, UserCheck } from "lucide-react"
+import { CustomerSearchDialog } from "@/components/shared/customer-search-dialog"
 import {
   carInsuranceRegistrationSchema,
   STATUS_OPTIONS,
   type CarInsuranceRegistration,
   type GeminiExtractItem,
 } from "@/lib/validators/car-insurance-registration-schema"
+import { formatPhone, formatDate, calculateAge, formatGender } from "@/lib/utils/format"
+import type { Customer } from "@/types/customer"
 import { toast } from "sonner"
 
 type ZoneId = "main" | "other"
@@ -50,15 +53,15 @@ function buildCarText(items: GeminiExtractItem[]): string {
     .join("\n\n")
 }
 
-function formatPhone(raw: string): string {
-  const digits = raw.replace(/[^\d]/g, "")
-  if (digits.length === 11) return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
-  if (digits.length === 10) return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`
-  return raw
-}
-
 export function NewCarInsuranceForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const prefilledCustomerId = searchParams.get("customer_id")
+
+  const [customer, setCustomer] = useState<Customer | null>(null)
+  const [loadingCustomer, setLoadingCustomer] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+
   const [activeZone, setActiveZone] = useState<ZoneId>("main")
   const [analyzing, setAnalyzing] = useState(false)
   const [uploadingMain, setUploadingMain] = useState(false)
@@ -85,10 +88,40 @@ export function NewCarInsuranceForm() {
     resolver: zodResolver(carInsuranceRegistrationSchema),
     defaultValues: {
       상태: STATUS_OPTIONS[0],
+      customer_id: prefilledCustomerId ?? undefined,
     },
   })
 
   const watchedStatus = watch("상태")
+
+  // URL ?customer_id=... 로 진입한 경우 고객 정보 미리 로드
+  useEffect(() => {
+    if (!prefilledCustomerId) return
+    let cancelled = false
+    setLoadingCustomer(true)
+    fetch(`/api/customers/${prefilledCustomerId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((body) => {
+        if (cancelled) return
+        const c: Customer | null = body?.data ?? null
+        if (c) {
+          setCustomer(c)
+          setValue("customer_id", c.id, { shouldValidate: true })
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingCustomer(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [prefilledCustomerId, setValue])
+
+  const selectCustomer = (c: Customer) => {
+    setCustomer(c)
+    setValue("customer_id", c.id, { shouldValidate: true })
+    setSearchOpen(false)
+  }
 
   const uploadFile = useCallback(async (file: File): Promise<string | null> => {
     const fd = new FormData()
@@ -127,9 +160,6 @@ export function NewCarInsuranceForm() {
         toast.warning("이미지에서 추출된 정보가 없습니다")
         return
       }
-      const first = items[0]
-      if (first.피보험자) setValue("고객명", first.피보험자, { shouldValidate: true })
-      if (first.생년월일) setValue("생년월일", first.생년월일)
       setValue("차량정보", buildCarText(items))
 
       const renewalDates = Array.from(
@@ -148,6 +178,10 @@ export function NewCarInsuranceForm() {
 
   const handlePasteImage = useCallback(
     async (file: File) => {
+      if (!customer) {
+        toast.error("먼저 고객을 선택해주세요")
+        return
+      }
       const zone = activeZone
       const reader = new FileReader()
       reader.onload = async (e) => {
@@ -183,7 +217,7 @@ export function NewCarInsuranceForm() {
       }
       reader.readAsDataURL(file)
     },
-    [activeZone, analyzeImage, uploadFile, applyExtraction],
+    [activeZone, analyzeImage, uploadFile, applyExtraction, customer],
   )
 
   useEffect(() => {
@@ -206,6 +240,10 @@ export function NewCarInsuranceForm() {
   }, [handlePasteImage])
 
   const onPdfChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!customer) {
+      toast.error("먼저 고객을 선택해주세요")
+      return
+    }
     const files = e.target.files
     if (!files || files.length === 0) return
     setUploadingPdf(true)
@@ -222,11 +260,14 @@ export function NewCarInsuranceForm() {
   }
 
   const onSubmit = async (form: CarInsuranceRegistration) => {
+    if (!customer) {
+      toast.error("고객을 먼저 선택해주세요")
+      return
+    }
     setSaving(true)
     try {
       const payload = {
         ...form,
-        연락처: form.연락처 ? formatPhone(form.연락처) : null,
         가입정보경로: mainUrl || null,
         비교표경로: pdfUrls.length ? pdfUrls.join("\n") : null,
         이미지경로: otherUrls.length ? otherUrls.join("\n") : null,
@@ -242,7 +283,7 @@ export function NewCarInsuranceForm() {
         return
       }
       toast.success("자동차보험 신규 등록 완료")
-      router.push("/admin/renewals/car-insurance")
+      router.push(`/admin/customers/${customer.id}`)
     } catch (error) {
       console.error(error)
       toast.error("저장 중 오류가 발생했습니다")
@@ -253,14 +294,74 @@ export function NewCarInsuranceForm() {
 
   const status = watchedStatus ?? STATUS_OPTIONS[0]
 
+  // 고객 미선택 시 — 검색만 노출
+  if (!customer) {
+    return (
+      <div className="space-y-4">
+        <div>
+          <h1 className="text-2xl font-bold">자동차보험 신규 등록</h1>
+          <p className="text-sm text-muted-foreground">
+            먼저 자동차보험을 등록할 기존 고객을 선택해주세요.
+          </p>
+        </div>
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center gap-3 py-12">
+            {loadingCustomer ? (
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            ) : (
+              <>
+                <Search className="h-8 w-8 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">고객 검색을 시작하세요</p>
+                <Button onClick={() => setSearchOpen(true)}>
+                  <Search className="mr-2 h-4 w-4" />
+                  고객 검색
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+        <CustomerSearchDialog
+          open={searchOpen}
+          onOpenChange={setSearchOpen}
+          onSelect={selectCustomer}
+          title="자동차보험을 등록할 고객 선택"
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">자동차보험 신규 등록</h1>
-        <p className="text-sm text-muted-foreground">
-          ① 영역에 가입정보 이미지를 Ctrl+V 하면 AI가 자동 분석합니다.
-        </p>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <h1 className="text-2xl font-bold">자동차보험 신규 등록</h1>
+          <p className="text-sm text-muted-foreground">
+            ① 영역에 가입정보 이미지를 Ctrl+V 하면 AI가 자동 분석합니다.
+          </p>
+        </div>
       </div>
+
+      {/* 선택된 고객 정보 (읽기 전용) */}
+      <Card className="border-primary/40 bg-primary/5">
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 py-3">
+          <div className="flex items-center gap-3">
+            <UserCheck className="h-5 w-5 text-primary" />
+            <div>
+              <p className="text-base font-bold">{customer.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {formatDate(customer.birth_date)}
+                {calculateAge(customer.birth_date) != null && ` (${calculateAge(customer.birth_date)}세)`}
+                {customer.gender && ` · ${formatGender(customer.gender)}`}
+                {customer.phone && ` · ${formatPhone(customer.phone)}`}
+              </p>
+            </div>
+          </div>
+          <Button type="button" variant="outline" size="sm" onClick={() => setSearchOpen(true)}>
+            <Search className="mr-2 h-3.5 w-3.5" />
+            다른 고객 선택
+          </Button>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -351,31 +452,17 @@ export function NewCarInsuranceForm() {
       </Card>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <input type="hidden" {...register("customer_id")} />
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">🧾 고객 정보</CardTitle>
+            <CardTitle className="text-base">🚗 자동차보험 정보</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <Field label="고객명 *" error={errors.고객명?.message}>
-                <Input {...register("고객명")} />
-              </Field>
-              <Field label="관계인">
-                <Input {...register("관계인")} />
-              </Field>
-              <Field label="생년월일 (YYYY-MM-DD)" error={errors.생년월일?.message}>
-                <Input {...register("생년월일")} placeholder="1990-01-01" />
-              </Field>
-              <Field label="주민번호 뒷자리" error={errors.주민번호뒷자리?.message}>
-                <Input type="password" maxLength={7} {...register("주민번호뒷자리")} />
-              </Field>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <Field label="만기 갱신일 (MM-DD) *" error={errors.갱신일?.message}>
                 <Input {...register("갱신일")} placeholder="03-15" />
               </Field>
-              <Field label="연락처">
-                <Input {...register("연락처")} placeholder="010-1234-5678" />
-              </Field>
-              <Field label="상태" className="md:col-span-1">
+              <Field label="상태">
                 <Select
                   value={status}
                   onValueChange={(v) =>
@@ -401,7 +488,7 @@ export function NewCarInsuranceForm() {
             <Field label="비교 분석 내용">
               <Textarea rows={4} {...register("비교내용")} />
             </Field>
-            <Field label="추가 메모">
+            <Field label="메모">
               <Textarea rows={3} {...register("메모")} />
             </Field>
           </CardContent>
@@ -417,6 +504,13 @@ export function NewCarInsuranceForm() {
           </Button>
         </div>
       </form>
+
+      <CustomerSearchDialog
+        open={searchOpen}
+        onOpenChange={setSearchOpen}
+        onSelect={selectCustomer}
+        title="자동차보험을 등록할 고객 선택"
+      />
 
       <Dialog open={renewalDialogOpen} onOpenChange={setRenewalDialogOpen}>
         <DialogContent>

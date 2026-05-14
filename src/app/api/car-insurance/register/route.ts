@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     }
 
     const service = new CarInsuranceRegistrationService(supabase)
-    const result = await service.register(parsed.data, user.id)
+    const result = await service.register(parsed.data)
 
     return NextResponse.json({ data: result }, { status: 201 })
   } catch (error) {
