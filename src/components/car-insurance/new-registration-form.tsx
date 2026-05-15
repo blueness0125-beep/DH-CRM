@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
+import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -48,7 +49,7 @@ import {
   type GeminiExtractItem,
 } from "@/lib/validators/car-insurance-registration-schema"
 import { formatPhone, formatDate, calculateAge, formatGender } from "@/lib/utils/format"
-import type { Customer } from "@/types/customer"
+import type { Customer, CarInsurance } from "@/types/customer"
 import { toast } from "sonner"
 
 type ZoneId = "main" | "other"
@@ -110,6 +111,7 @@ export function NewCarInsuranceForm({ mode = "create", edit }: Props) {
   const [customer, setCustomer] = useState<Customer | null>(edit?.customer ?? null)
   const [loadingCustomer, setLoadingCustomer] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [existingCarInsurance, setExistingCarInsurance] = useState<CarInsurance[]>([])
 
   const [activeZone, setActiveZone] = useState<ZoneId>("main")
   const [analyzing, setAnalyzing] = useState(false)
@@ -155,6 +157,32 @@ export function NewCarInsuranceForm({ mode = "create", edit }: Props) {
   })
 
   const watchedStatus = watch("상태")
+
+  // 선택된 고객의 기존 자동차보험 row 목록 fetch (자기 자신은 제외)
+  useEffect(() => {
+    const id = customer?.id
+    if (!id) {
+      setExistingCarInsurance([])
+      return
+    }
+    let cancelled = false
+    fetch(`/api/customers/${id}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((body) => {
+        if (cancelled) return
+        const list = (body?.data?.car_insurance_data ?? []) as CarInsurance[]
+        const filtered = isEdit && edit
+          ? list.filter((ci) => ci.등록번호 !== edit.등록번호)
+          : list
+        setExistingCarInsurance(filtered)
+      })
+      .catch(() => {
+        if (!cancelled) setExistingCarInsurance([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [customer?.id, isEdit, edit])
 
   useEffect(() => {
     if (isEdit) return
@@ -477,6 +505,42 @@ export function NewCarInsuranceForm({ mode = "create", edit }: Props) {
               </TabsList>
 
               <TabsContent value="info" className="space-y-4">
+                {existingCarInsurance.length > 0 && (
+                  <Card className="border-amber-300 bg-amber-50/40 dark:bg-amber-950/20">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">
+                        이 고객의 기존 자동차보험 ({existingCarInsurance.length}건) — 기존 갱신일 정보를 수정하려면 클릭
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-wrap gap-2">
+                        {existingCarInsurance.map((ci) => {
+                          const vehicles = collectVehicleNumbersFromText(ci.차량정보 ?? "")
+                          const summary = vehicles.length > 0 ? vehicles.join(", ") : "(차량번호 없음)"
+                          return (
+                            <Link
+                              key={ci.등록번호}
+                              href={`/admin/car-insurance/edit/${ci.등록번호}`}
+                            >
+                              <Badge
+                                variant="outline"
+                                className="cursor-pointer border-amber-300 bg-background px-3 py-1.5 text-sm hover:bg-amber-100 dark:hover:bg-amber-950/40"
+                              >
+                                <Pencil className="mr-1.5 h-3 w-3" />
+                                <span className="font-semibold">{ci.갱신일 || "(갱신일 없음)"}</span>
+                                <span className="ml-1.5 text-xs text-muted-foreground">· {summary}</span>
+                              </Badge>
+                            </Link>
+                          )
+                        })}
+                      </div>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        새 차량(새 갱신일)을 추가하려면 아래 만기 갱신일 필드에 직접 입력하세요.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-base">📎 서류 첨부</CardTitle>
