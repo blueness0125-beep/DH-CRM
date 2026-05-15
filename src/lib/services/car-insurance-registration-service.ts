@@ -53,18 +53,8 @@ export class CarInsuranceRegistrationService {
       throw new Error("선택한 고객을 찾을 수 없습니다")
     }
 
-    const { count, error: countError } = await this.supabase
-      .from("car_insurance_data")
-      .select("등록번호", { count: "exact", head: true })
-      .eq("customer_id", form.customer_id)
-
-    if (countError) throw countError
-    if ((count ?? 0) > 0) {
-      throw new Error(
-        "이미 자동차보험 정보가 등록된 고객입니다. 자동차보험 갱신/계약 입력 메뉴를 이용해주세요.",
-      )
-    }
-
+    // 한 고객이 여러 차량을 보유할 수 있고 차량마다 갱신일이 다를 수 있으므로
+    // 동일 customer_id에 대한 car_insurance_data 다중 row를 허용한다.
     let 등록번호 = generateRegistrationId()
     if (await this.carRepo.existsByRegistrationId(등록번호)) {
       await new Promise((r) => setTimeout(r, 1000))

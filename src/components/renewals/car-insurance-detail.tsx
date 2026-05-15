@@ -5,10 +5,21 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { CarInsuranceContractForm } from "./car-insurance-contract-form"
 import type { CarInsuranceEntry } from "@/app/api/renewals/car-insurance/route"
 import type { CarInsuranceContract } from "@/types/car-insurance"
 import { Plus, Pencil, Trash2, FileText, Settings2 } from "lucide-react"
+import { toast } from "sonner"
 
 const 상태_목록 = ["상담 대기", "진행중", "보류", "완료", "취소"]
 
@@ -171,6 +182,25 @@ export function CarInsuranceDetail({ entry, onContractSaved }: Props) {
   const [editState, setEditState] = useState(entry.상태 ?? "")
   const [editMemo, setEditMemo] = useState(entry.메모 ?? "")
   const [saving, setSaving] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  async function handleDeleteCarInsurance() {
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/car-insurance/${entry.등록번호}`, { method: "DELETE" })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        toast.error(body.error || "삭제에 실패했습니다")
+        return
+      }
+      toast.success("자동차보험 정보가 삭제되었습니다")
+      setDeleteOpen(false)
+      onContractSaved()
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   const 가입정보 = parseUrls(entry.가입정보경로)
   const 비교표 = parseUrls(entry.비교표경로)
@@ -314,12 +344,43 @@ export function CarInsuranceDetail({ entry, onContractSaved }: Props) {
               자동차보험 정보 수정
             </Button>
           </Link>
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-destructive hover:text-destructive"
+            onClick={() => setDeleteOpen(true)}
+          >
+            <Trash2 className="h-3.5 w-3.5 mr-1" />
+            자동차보험 정보 삭제
+          </Button>
         </div>
         <Button size="sm" onClick={openAdd}>
           <Plus className="h-3.5 w-3.5 mr-1" />
           {contracts.length === 0 ? "계약 입력" : "계약 추가"}
         </Button>
       </div>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>자동차보험 정보 삭제</AlertDialogTitle>
+            <AlertDialogDescription>
+              {entry.고객명} 고객의 자동차보험 정보(갱신일 {entry.갱신일 || "-"})와 계약 {contracts.length}건이
+              모두 삭제됩니다. 되돌릴 수 없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteCarInsurance}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "삭제 중..." : "삭제"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
 

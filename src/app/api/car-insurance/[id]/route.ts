@@ -25,6 +25,36 @@ export async function GET(_req: NextRequest, { params }: Params) {
   }
 }
 
+export async function DELETE(_req: NextRequest, { params }: Params) {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+    const { id } = await params
+
+    // FK cascade가 명확치 않으므로 contracts 먼저 명시적으로 삭제
+    const { error: contractError } = await supabase
+      .from("car_insurance_contracts")
+      .delete()
+      .eq("car_insurance_id", id)
+    if (contractError) throw contractError
+
+    const { error } = await supabase
+      .from("car_insurance_data")
+      .delete()
+      .eq("등록번호", id)
+    if (error) throw error
+
+    return NextResponse.json({ success: true })
+  } catch (e) {
+    console.error(e)
+    return NextResponse.json({ error: "삭제에 실패했습니다" }, { status: 500 })
+  }
+}
+
 export async function PUT(req: NextRequest, { params }: Params) {
   try {
     const supabase = await createClient()

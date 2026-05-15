@@ -417,7 +417,7 @@ export function NewCarInsuranceForm({ mode = "create", edit }: Props) {
               ? "먼저 자동차보험을 등록할 기존 고객을 선택해주세요."
               : isEdit
                 ? "자동차보험 정보를 수정합니다."
-                : "탭 1에서 가입 정보를 paste하거나, 탭 2에서 계약을 바로 입력할 수 있습니다."}
+                : "갱신일만 입력해서 갱신 대상으로 미리 등록할 수도 있고, 계약 정보까지 한 번에 입력할 수도 있습니다. 한 고객이 차량을 여러 대 보유한 경우 차량(갱신일)마다 별도로 등록하세요."}
           </p>
         </div>
       </div>
@@ -576,7 +576,7 @@ export function NewCarInsuranceForm({ mode = "create", edit }: Props) {
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <Field
-                        label="만기 갱신일 (MM-DD) — 비워두면 계약 정보에서 자동 추출"
+                        label="만기 갱신일 (MM-DD) *"
                         error={errors.갱신일?.message}
                       >
                         <Input {...register("갱신일")} placeholder="03-15" />
