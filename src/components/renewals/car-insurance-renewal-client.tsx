@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Car, ChevronDown, ChevronUp, Phone } from "lucide-react"
+import { Car, ChevronDown, ChevronUp, Phone, Download, Loader2 } from "lucide-react"
 import { CarInsuranceDetail } from "./car-insurance-detail"
 import { formatPhone } from "@/lib/utils/format"
 import type { CarInsuranceEntry } from "@/app/api/renewals/car-insurance/route"
@@ -70,7 +70,34 @@ export function CarInsuranceRenewalClient() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [exporting, setExporting] = useState(false)
   const todayStr = todayLocalString()
+
+  async function handleExport() {
+    setExporting(true)
+    try {
+      const params = activeFilter === "all" ? "" : `?filter=${activeFilter}`
+      const res = await fetch(`/api/renewals/car-insurance/export${params}`)
+      if (!res.ok) {
+        alert("Excel 내보내기에 실패했습니다")
+        return
+      }
+      const blob = await res.blob()
+      const cd = res.headers.get("Content-Disposition") ?? ""
+      const match = cd.match(/filename\*=UTF-8''([^;]+)/)
+      const filename = match ? decodeURIComponent(match[1]) : `자동차보험갱신_${todayStr}.xlsx`
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const load = useCallback(() => {
     setLoading(true)
@@ -238,6 +265,19 @@ export function CarInsuranceRenewalClient() {
           )}
         </CardContent>
       </Card>
+
+      {!loading && !error && data.length > 0 && (
+        <div className="flex justify-end">
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={exporting}>
+            {exporting ? (
+              <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-3.5 w-3.5" />
+            )}
+            목록 Excel 내보내기
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
