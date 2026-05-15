@@ -74,15 +74,19 @@ export class CarInsuranceRegistrationService {
     const contracts = form.contracts ?? []
     const 갱신일 = form.갱신일 || deriveRenewalFromContracts(contracts) || ""
     const 차량정보 = form.차량정보 || (contracts.length > 0 ? deriveVehicleInfoFromContracts(contracts) : null)
+    // 계약이 1건이라도 입력되면 상태를 자동으로 "완료"로 설정
+    const 상태 = contracts.length > 0 ? "✅ 완료" : form.상태
 
-    const { customer_id, contracts: _c, 갱신일: _r, 차량정보: _v, ...rest } = form
+    const { customer_id, contracts: _c, 갱신일: _r, 차량정보: _v, 상태: _s, ...rest } = form
     void _c
     void _r
     void _v
+    void _s
     const carRecord = await this.carRepo.insertCarInsurance({
       ...rest,
       갱신일,
       차량정보,
+      상태,
       등록번호,
       customer_id,
       고객명: customer.name,
