@@ -6,6 +6,7 @@ export type CarInsuranceContract = {
   채널: string
   가입보험료: number | null
   차량번호: string | null
+  차대번호: string | null
   증권번호: string | null
   시작일: string | null
   만기일: string | null

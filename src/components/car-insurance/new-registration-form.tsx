@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import {
   Select,
   SelectContent,
@@ -25,8 +26,21 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog"
-import { Save, Loader2, Upload, X, ImageIcon, FileText, Search, UserCheck } from "lucide-react"
+import {
+  Save,
+  Loader2,
+  Upload,
+  X,
+  ImageIcon,
+  FileText,
+  Search,
+  UserCheck,
+  Plus,
+  Pencil,
+  Trash2,
+} from "lucide-react"
 import { CustomerSearchDialog } from "@/components/shared/customer-search-dialog"
+import { ContractInlineDialog, type ContractDraft } from "./contract-inline-dialog"
 import {
   carInsuranceRegistrationSchema,
   STATUS_OPTIONS,
@@ -53,12 +67,37 @@ function buildCarText(items: GeminiExtractItem[]): string {
     .join("\n\n")
 }
 
-export function NewCarInsuranceForm() {
+type EditPrefill = {
+  등록번호: string
+  customer: Customer
+  관계인: string | null
+  갱신일: string | null
+  상태: string | null
+  차량정보: string | null
+  비교내용: string | null
+  메모: string | null
+  가입정보경로: string | null
+  비교표경로: string | null
+  이미지경로: string | null
+}
+
+type Props = {
+  mode?: "create" | "edit"
+  edit?: EditPrefill
+}
+
+function splitUrls(raw: string | null | undefined): string[] {
+  if (!raw) return []
+  return raw.split("\n").map((s) => s.trim()).filter(Boolean)
+}
+
+export function NewCarInsuranceForm({ mode = "create", edit }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const prefilledCustomerId = searchParams.get("customer_id")
+  const isEdit = mode === "edit" && !!edit
 
-  const [customer, setCustomer] = useState<Customer | null>(null)
+  const [customer, setCustomer] = useState<Customer | null>(edit?.customer ?? null)
   const [loadingCustomer, setLoadingCustomer] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
 
@@ -69,12 +108,20 @@ export function NewCarInsuranceForm() {
   const [uploadingPdf, setUploadingPdf] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  const [mainUrl, setMainUrl] = useState<string>("")
-  const [pdfUrls, setPdfUrls] = useState<string[]>([])
-  const [otherUrls, setOtherUrls] = useState<string[]>([])
+  const initialMainUrl = isEdit ? edit?.가입정보경로 ?? "" : ""
+  const initialPdfUrls = isEdit ? splitUrls(edit?.비교표경로) : []
+  const initialOtherUrls = isEdit ? splitUrls(edit?.이미지경로) : []
+
+  const [mainUrl, setMainUrl] = useState<string>(initialMainUrl)
+  const [pdfUrls, setPdfUrls] = useState<string[]>(initialPdfUrls)
+  const [otherUrls, setOtherUrls] = useState<string[]>(initialOtherUrls)
 
   const [pendingItems, setPendingItems] = useState<GeminiExtractItem[]>([])
   const [renewalDialogOpen, setRenewalDialogOpen] = useState(false)
+
+  const [contracts, setContracts] = useState<ContractDraft[]>([])
+  const [contractDialogOpen, setContractDialogOpen] = useState(false)
+  const [editingContractIdx, setEditingContractIdx] = useState<number | null>(null)
 
   const pdfInputRef = useRef<HTMLInputElement>(null)
 
@@ -87,15 +134,20 @@ export function NewCarInsuranceForm() {
   } = useForm<CarInsuranceRegistration>({
     resolver: zodResolver(carInsuranceRegistrationSchema),
     defaultValues: {
-      상태: STATUS_OPTIONS[0],
-      customer_id: prefilledCustomerId ?? undefined,
+      상태: (edit?.상태 as (typeof STATUS_OPTIONS)[number]) ?? STATUS_OPTIONS[0],
+      customer_id: edit?.customer.id ?? prefilledCustomerId ?? undefined,
+      관계인: edit?.관계인 ?? "",
+      갱신일: edit?.갱신일 ?? "",
+      차량정보: edit?.차량정보 ?? "",
+      비교내용: edit?.비교내용 ?? "",
+      메모: edit?.메모 ?? "",
     },
   })
 
   const watchedStatus = watch("상태")
 
-  // URL ?customer_id=... 로 진입한 경우 고객 정보 미리 로드
   useEffect(() => {
+    if (isEdit) return
     if (!prefilledCustomerId) return
     let cancelled = false
     setLoadingCustomer(true)
@@ -115,7 +167,7 @@ export function NewCarInsuranceForm() {
     return () => {
       cancelled = true
     }
-  }, [prefilledCustomerId, setValue])
+  }, [prefilledCustomerId, setValue, isEdit])
 
   const selectCustomer = (c: Customer) => {
     setCustomer(c)
@@ -259,31 +311,75 @@ export function NewCarInsuranceForm() {
     }
   }
 
+  function openContractAdd() {
+    setEditingContractIdx(null)
+    setContractDialogOpen(true)
+  }
+
+  function openContractEdit(idx: number) {
+    setEditingContractIdx(idx)
+    setContractDialogOpen(true)
+  }
+
+  function handleContractSave(draft: ContractDraft) {
+    if (editingContractIdx == null) {
+      setContracts((prev) => [...prev, draft])
+    } else {
+      setContracts((prev) => prev.map((c, i) => (i === editingContractIdx ? draft : c)))
+    }
+    setContractDialogOpen(false)
+    setEditingContractIdx(null)
+  }
+
+  function handleContractDelete(idx: number) {
+    setContracts((prev) => prev.filter((_, i) => i !== idx))
+  }
+
   const onSubmit = async (form: CarInsuranceRegistration) => {
-    if (!customer) {
+    if (!customer && !isEdit) {
       toast.error("고객을 먼저 선택해주세요")
       return
     }
     setSaving(true)
     try {
-      const payload = {
+      const sharedPayload = {
         ...form,
         가입정보경로: mainUrl || null,
         비교표경로: pdfUrls.length ? pdfUrls.join("\n") : null,
         이미지경로: otherUrls.length ? otherUrls.join("\n") : null,
       }
-      const res = await fetch("/api/car-insurance/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        toast.error(typeof body.error === "string" ? body.error : "저장 실패")
-        return
+
+      if (isEdit) {
+        const { customer_id: _ci, contracts: _ctr, ...rest } = sharedPayload
+        void _ci
+        void _ctr
+        const res = await fetch(`/api/car-insurance/${edit!.등록번호}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(rest),
+        })
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}))
+          toast.error(typeof body.error === "string" ? body.error : "수정 실패")
+          return
+        }
+        toast.success("자동차보험 정보 수정 완료")
+        router.push(`/admin/customers/${edit!.customer.id}`)
+      } else {
+        const payload = { ...sharedPayload, contracts }
+        const res = await fetch("/api/car-insurance/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}))
+          toast.error(typeof body.error === "string" ? body.error : "저장 실패")
+          return
+        }
+        toast.success(`자동차보험 신규 등록 완료${contracts.length ? ` (계약 ${contracts.length}건 포함)` : ""}`)
+        router.push(`/admin/customers/${customer!.id}`)
       }
-      toast.success("자동차보험 신규 등록 완료")
-      router.push(`/admin/customers/${customer.id}`)
     } catch (error) {
       console.error(error)
       toast.error("저장 중 오류가 발생했습니다")
@@ -298,11 +394,15 @@ export function NewCarInsuranceForm() {
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold">자동차보험 신규 등록</h1>
+          <h1 className="text-2xl font-bold">
+            {isEdit ? "자동차보험 정보 수정" : "자동차보험 신규 등록"}
+          </h1>
           <p className="text-sm text-muted-foreground">
-            {customer
-              ? "① 영역에 가입정보 이미지를 Ctrl+V 하면 AI가 자동 분석합니다."
-              : "먼저 자동차보험을 등록할 기존 고객을 선택해주세요."}
+            {!customer
+              ? "먼저 자동차보험을 등록할 기존 고객을 선택해주세요."
+              : isEdit
+                ? "자동차보험 정보를 수정합니다."
+                : "탭 1에서 가입 정보를 paste하거나, 탭 2에서 계약을 바로 입력할 수 있습니다."}
           </p>
         </div>
       </div>
@@ -326,170 +426,227 @@ export function NewCarInsuranceForm() {
         </Card>
       ) : (
         <>
-          {/* 선택된 고객 정보 (읽기 전용) */}
           <Card className="border-primary/40 bg-primary/5">
-        <CardContent className="flex flex-wrap items-center justify-between gap-3 py-3">
-          <div className="flex items-center gap-3">
-            <UserCheck className="h-5 w-5 text-primary" />
-            <div>
-              <p className="text-base font-bold">{customer.name}</p>
-              <p className="text-xs text-muted-foreground">
-                {formatDate(customer.birth_date)}
-                {calculateAge(customer.birth_date) != null && ` (${calculateAge(customer.birth_date)}세)`}
-                {customer.ssn_back && ` · ${customer.ssn_back}`}
-                {customer.gender && ` · ${formatGender(customer.gender)}`}
-                {customer.phone && ` · ${formatPhone(customer.phone)}`}
-              </p>
-            </div>
-          </div>
-          <Button type="button" variant="outline" size="sm" onClick={() => setSearchOpen(true)}>
-            <Search className="mr-2 h-3.5 w-3.5" />
-            다른 고객 선택
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">📎 서류 첨부</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            <PasteZone
-              label="① 현재 가입 정보 (AI 분석)"
-              active={activeZone === "main"}
-              onActivate={() => setActiveZone("main")}
-              busy={analyzing || uploadingMain}
-              filledLabel={mainUrl ? "업로드 완료" : null}
-            />
-            <div className="flex flex-col gap-2 rounded-md border p-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">② 비교표 (다중 업로드)</span>
-                <Badge variant="secondary">{pdfUrls.length}개</Badge>
+            <CardContent className="flex flex-wrap items-center justify-between gap-3 py-3">
+              <div className="flex items-center gap-3">
+                <UserCheck className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-base font-bold">{customer.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatDate(customer.birth_date)}
+                    {calculateAge(customer.birth_date) != null && ` (${calculateAge(customer.birth_date)}세)`}
+                    {customer.ssn_back && ` · ${customer.ssn_back}`}
+                    {customer.gender && ` · ${formatGender(customer.gender)}`}
+                    {customer.phone && ` · ${formatPhone(customer.phone)}`}
+                  </p>
+                </div>
               </div>
-              <input
-                ref={pdfInputRef}
-                type="file"
-                accept="image/*,application/pdf"
-                multiple
-                className="hidden"
-                onChange={onPdfChange}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => pdfInputRef.current?.click()}
-                disabled={uploadingPdf}
-              >
-                {uploadingPdf ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Upload className="mr-2 h-4 w-4" />
-                )}
-                파일 선택
-              </Button>
-              {pdfUrls.length > 0 && (
-                <ul className="space-y-1 text-xs text-muted-foreground">
-                  {pdfUrls.map((u, i) => (
-                    <li key={u} className="flex items-center gap-1">
-                      <FileText className="h-3 w-3" />
-                      파일 {i + 1}
-                      <button
-                        type="button"
-                        className="ml-auto text-destructive hover:underline"
-                        onClick={() => setPdfUrls((prev) => prev.filter((x) => x !== u))}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+              {!isEdit && (
+                <Button type="button" variant="outline" size="sm" onClick={() => setSearchOpen(true)}>
+                  <Search className="mr-2 h-3.5 w-3.5" />
+                  다른 고객 선택
+                </Button>
               )}
-            </div>
-            <PasteZone
-              label="③ 기타 이미지 (분석 없음)"
-              active={activeZone === "other"}
-              onActivate={() => setActiveZone("other")}
-              busy={uploadingOther}
-              filledLabel={otherUrls.length ? `${otherUrls.length}개 업로드됨` : null}
-              extras={
-                otherUrls.length > 0 && (
-                  <ul className="space-y-1 text-xs text-muted-foreground">
-                    {otherUrls.map((u, i) => (
-                      <li key={u} className="flex items-center gap-1">
-                        <ImageIcon className="h-3 w-3" />
-                        이미지 {i + 1}
-                        <button
+            </CardContent>
+          </Card>
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <input type="hidden" {...register("customer_id")} />
+
+            <Tabs defaultValue="info">
+              <TabsList>
+                <TabsTrigger value="info">자동차보험 정보</TabsTrigger>
+                <TabsTrigger value="contract">
+                  계약 정보 {contracts.length > 0 && `(${contracts.length})`}
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="info" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">📎 서류 첨부</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                      <PasteZone
+                        label="① 현재 가입 정보 (AI 분석)"
+                        active={activeZone === "main"}
+                        onActivate={() => setActiveZone("main")}
+                        busy={analyzing || uploadingMain}
+                        filledLabel={mainUrl ? "업로드 완료" : null}
+                      />
+                      <div className="flex flex-col gap-2 rounded-md border p-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">② 비교표 (다중 업로드)</span>
+                          <Badge variant="secondary">{pdfUrls.length}개</Badge>
+                        </div>
+                        <input
+                          ref={pdfInputRef}
+                          type="file"
+                          accept="image/*,application/pdf"
+                          multiple
+                          className="hidden"
+                          onChange={onPdfChange}
+                        />
+                        <Button
                           type="button"
-                          className="ml-auto text-destructive hover:underline"
-                          onClick={() => setOtherUrls((prev) => prev.filter((x) => x !== u))}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => pdfInputRef.current?.click()}
+                          disabled={uploadingPdf}
                         >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )
-              }
-            />
-          </div>
-        </CardContent>
-      </Card>
+                          {uploadingPdf ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Upload className="mr-2 h-4 w-4" />
+                          )}
+                          파일 선택
+                        </Button>
+                        {pdfUrls.length > 0 && (
+                          <ul className="space-y-1 text-xs text-muted-foreground">
+                            {pdfUrls.map((u, i) => (
+                              <li key={u} className="flex items-center gap-1">
+                                <FileText className="h-3 w-3" />
+                                <a href={u} target="_blank" rel="noreferrer" className="hover:underline">
+                                  파일 {i + 1}
+                                </a>
+                                <button
+                                  type="button"
+                                  className="ml-auto text-destructive hover:underline"
+                                  onClick={() => setPdfUrls((prev) => prev.filter((x) => x !== u))}
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                      <PasteZone
+                        label="③ 기타 이미지 (분석 없음)"
+                        active={activeZone === "other"}
+                        onActivate={() => setActiveZone("other")}
+                        busy={uploadingOther}
+                        filledLabel={otherUrls.length ? `${otherUrls.length}개 업로드됨` : null}
+                        extras={
+                          otherUrls.length > 0 && (
+                            <ul className="space-y-1 text-xs text-muted-foreground">
+                              {otherUrls.map((u, i) => (
+                                <li key={u} className="flex items-center gap-1">
+                                  <ImageIcon className="h-3 w-3" />
+                                  <a href={u} target="_blank" rel="noreferrer" className="hover:underline">
+                                    이미지 {i + 1}
+                                  </a>
+                                  <button
+                                    type="button"
+                                    className="ml-auto text-destructive hover:underline"
+                                    onClick={() => setOtherUrls((prev) => prev.filter((x) => x !== u))}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          )
+                        }
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <input type="hidden" {...register("customer_id")} />
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">🚗 자동차보험 정보</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <Field label="만기 갱신일 (MM-DD) *" error={errors.갱신일?.message}>
-                <Input {...register("갱신일")} placeholder="03-15" />
-              </Field>
-              <Field label="상태">
-                <Select
-                  value={status}
-                  onValueChange={(v) =>
-                    setValue("상태", v as (typeof STATUS_OPTIONS)[number])
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUS_OPTIONS.map((opt) => (
-                      <SelectItem key={opt} value={opt}>
-                        {opt}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">🚗 자동차보험 정보</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <Field
+                        label="만기 갱신일 (MM-DD) — 비워두면 계약 정보에서 자동 추출"
+                        error={errors.갱신일?.message}
+                      >
+                        <Input {...register("갱신일")} placeholder="03-15" />
+                      </Field>
+                      <Field label="상태">
+                        <Select
+                          value={status}
+                          onValueChange={(v) =>
+                            setValue("상태", v as (typeof STATUS_OPTIONS)[number])
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {STATUS_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={opt}>
+                                {opt}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                    </div>
+                    <Field label="차량 정보 (AI 자동 입력 / 자유 편집)">
+                      <Textarea rows={6} {...register("차량정보")} />
+                    </Field>
+                    <Field label="비교 분석 내용">
+                      <Textarea rows={4} {...register("비교내용")} />
+                    </Field>
+                    <Field label="메모">
+                      <Textarea rows={3} {...register("메모")} />
+                    </Field>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="contract" className="space-y-4">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                    <CardTitle className="text-base">📜 계약 정보</CardTitle>
+                    {!isEdit && (
+                      <Button type="button" size="sm" onClick={openContractAdd}>
+                        <Plus className="mr-1 h-4 w-4" />
+                        계약 추가
+                      </Button>
+                    )}
+                  </CardHeader>
+                  <CardContent>
+                    {isEdit ? (
+                      <p className="text-sm text-muted-foreground">
+                        계약은 자동차보험 갱신 메뉴에서 추가/수정/삭제할 수 있습니다.
+                      </p>
+                    ) : contracts.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        아직 입력된 계약이 없습니다. [계약 추가] 버튼으로 신차/중고차/갱신 계약을 입력하세요. 차량번호 대신 차대번호만 입력해도 됩니다.
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {contracts.map((c, i) => (
+                          <ContractCard
+                            key={i}
+                            index={i}
+                            contract={c}
+                            onEdit={() => openContractEdit(i)}
+                            onDelete={() => handleContractDelete(i)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => router.back()} disabled={saving}>
+                취소
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                {isEdit ? "수정" : "저장"}
+              </Button>
             </div>
-            <Field label="차량 정보 (AI 자동 입력)">
-              <Textarea rows={6} {...register("차량정보")} />
-            </Field>
-            <Field label="비교 분석 내용">
-              <Textarea rows={4} {...register("비교내용")} />
-            </Field>
-            <Field label="메모">
-              <Textarea rows={3} {...register("메모")} />
-            </Field>
-          </CardContent>
-        </Card>
-
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => router.back()} disabled={saving}>
-            취소
-          </Button>
-          <Button type="submit" disabled={saving}>
-            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            저장
-          </Button>
-        </div>
-      </form>
+          </form>
         </>
       )}
 
@@ -498,6 +655,15 @@ export function NewCarInsuranceForm() {
         onOpenChange={setSearchOpen}
         onSelect={selectCustomer}
         title="자동차보험을 등록할 고객 선택"
+      />
+
+      <ContractInlineDialog
+        open={contractDialogOpen}
+        onOpenChange={setContractDialogOpen}
+        defaultCustomerName={customer?.name ?? ""}
+        existingVehicleNumbers={collectVehicleNumbersFromText(watch("차량정보") ?? "")}
+        initial={editingContractIdx != null ? contracts[editingContractIdx] : null}
+        onSave={handleContractSave}
       />
 
       <Dialog open={renewalDialogOpen} onOpenChange={setRenewalDialogOpen}>
@@ -533,6 +699,51 @@ export function NewCarInsuranceForm() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  )
+}
+
+function collectVehicleNumbersFromText(text: string): string[] {
+  if (!text) return []
+  return [...text.matchAll(/차량번호[:\s]+(.+)/g)].map((m) => m[1].trim()).filter(Boolean)
+}
+
+function ContractCard({
+  index,
+  contract,
+  onEdit,
+  onDelete,
+}: {
+  index: number
+  contract: ContractDraft
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  const vehicleLabel = contract.차량번호 || (contract.차대번호 ? `차대 ${contract.차대번호}` : "차량 미입력")
+  return (
+    <div className="flex items-center justify-between rounded-md border bg-card p-3">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="outline">계약 {index + 1}</Badge>
+          <span className="text-sm font-medium">{vehicleLabel}</span>
+          <span className="text-xs text-muted-foreground">
+            {contract.보험사} · {contract.채널}
+          </span>
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          시작 {contract.시작일 ?? "-"} / 만기 {contract.만기일 ?? "-"}
+          {contract.가입보험료 != null && ` · ${contract.가입보험료.toLocaleString()}원`}
+          {contract.증권번호 && ` · ${contract.증권번호}`}
+        </p>
+      </div>
+      <div className="flex shrink-0 gap-1">
+        <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit}>
+          <Pencil className="h-3.5 w-3.5" />
+        </Button>
+        <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={onDelete}>
+          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+        </Button>
+      </div>
     </div>
   )
 }

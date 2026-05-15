@@ -18,6 +18,22 @@ export type CarInsuranceInsertPayload = {
   이미지경로?: string | null
 }
 
+export type ContractInsertPayload = {
+  car_insurance_id: string
+  계약일: string
+  보험사: string
+  채널: string
+  가입보험료: number | null
+  차량번호: string | null
+  차대번호: string | null
+  증권번호: string | null
+  시작일: string | null
+  만기일: string | null
+  피보험자: string | null
+  계약자: string | null
+  설계자: string | null
+}
+
 export class CarInsuranceRegistrationRepository {
   constructor(private supabase: SupabaseClient) {}
 
@@ -40,5 +56,47 @@ export class CarInsuranceRegistrationRepository {
 
     if (error) throw error
     return (count ?? 0) > 0
+  }
+
+  async insertContracts(rows: ContractInsertPayload[]) {
+    if (rows.length === 0) return []
+    const { data, error } = await this.supabase
+      .from("car_insurance_contracts")
+      .insert(rows)
+      .select()
+    if (error) throw error
+    return data
+  }
+
+  async deleteCarInsurance(등록번호: string) {
+    const { error } = await this.supabase
+      .from("car_insurance_data")
+      .delete()
+      .eq("등록번호", 등록번호)
+    if (error) throw error
+  }
+
+  async findByRegistrationId(등록번호: string) {
+    const { data, error } = await this.supabase
+      .from("car_insurance_data")
+      .select("*, customers ( id, name, birth_date, ssn_back, phone, gender ), car_insurance_contracts(*)")
+      .eq("등록번호", 등록번호)
+      .single()
+    if (error) throw error
+    return data
+  }
+
+  async updateCarInsurance(
+    등록번호: string,
+    patch: Partial<Omit<CarInsuranceInsertPayload, "등록번호" | "customer_id" | "고객명">>,
+  ) {
+    const { data, error } = await this.supabase
+      .from("car_insurance_data")
+      .update(patch)
+      .eq("등록번호", 등록번호)
+      .select()
+      .single()
+    if (error) throw error
+    return data
   }
 }

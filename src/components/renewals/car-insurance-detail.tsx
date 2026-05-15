@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { CarInsuranceContractForm } from "./car-insurance-contract-form"
 import type { CarInsuranceEntry } from "@/app/api/renewals/car-insurance/route"
 import type { CarInsuranceContract } from "@/types/car-insurance"
-import { Plus, Pencil, Trash2, FileText } from "lucide-react"
+import { Plus, Pencil, Trash2, FileText, Settings2 } from "lucide-react"
 
 const 상태_목록 = ["상담 대기", "진행중", "보류", "완료", "취소"]
 
@@ -298,17 +298,23 @@ export function CarInsuranceDetail({ entry, onContractSaved }: Props) {
       )}
 
       {/* 하단 버튼 */}
-      <div className="flex items-center justify-between pt-1">
-        {entry.customer_id ? (
-          <Link href={`/admin/car-insurance/new?customer_id=${entry.customer_id}`}>
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+        <div className="flex flex-wrap gap-2">
+          {entry.customer_id ? (
+            <Link href={`/admin/car-insurance/new?customer_id=${entry.customer_id}`}>
+              <Button size="sm" variant="outline">
+                <FileText className="h-3.5 w-3.5 mr-1" />
+                자동차보험 정보 등록
+              </Button>
+            </Link>
+          ) : null}
+          <Link href={`/admin/car-insurance/edit/${entry.등록번호}`}>
             <Button size="sm" variant="outline">
-              <FileText className="h-3.5 w-3.5 mr-1" />
-              자동차보험 정보 등록
+              <Settings2 className="h-3.5 w-3.5 mr-1" />
+              자동차보험 정보 수정
             </Button>
           </Link>
-        ) : (
-          <span />
-        )}
+        </div>
         <Button size="sm" onClick={openAdd}>
           <Plus className="h-3.5 w-3.5 mr-1" />
           {contracts.length === 0 ? "계약 입력" : "계약 추가"}

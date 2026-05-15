@@ -8,6 +8,7 @@ const updateSchema = z.object({
   채널: z.string().min(1),
   가입보험료: z.number().int().nonnegative().nullable(),
   차량번호: z.string().nullable(),
+  차대번호: z.string().nullable().optional(),
   증권번호: z.string().nullable(),
   시작일: z.string().nullable(),
   만기일: z.string().nullable(),
