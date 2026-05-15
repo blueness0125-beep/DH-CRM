@@ -336,6 +336,7 @@ export function NewCarInsuranceForm() {
               <p className="text-xs text-muted-foreground">
                 {formatDate(customer.birth_date)}
                 {calculateAge(customer.birth_date) != null && ` (${calculateAge(customer.birth_date)}세)`}
+                {customer.ssn_back && ` · ${customer.ssn_back}`}
                 {customer.gender && ` · ${formatGender(customer.gender)}`}
                 {customer.phone && ` · ${formatPhone(customer.phone)}`}
               </p>
