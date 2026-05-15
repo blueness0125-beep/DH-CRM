@@ -90,11 +90,8 @@ export function CustomerDetail({ customer, familyMembers }: CustomerDetailProps)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
 
-  const carInsurance = customer.car_insurance_data?.[0]
+  const carInsuranceList = customer.car_insurance_data ?? []
   const todayStr = todayLocalString()
-  const activeContracts: CarInsuranceContract[] = (carInsurance?.car_insurance_contracts ?? []).filter(
-    (c) => !c.만기일 || c.만기일 >= todayStr,
-  )
 
   const hasWorkInfo =
     customer.work_company_name ||
@@ -102,10 +99,6 @@ export function CustomerDetail({ customer, familyMembers }: CustomerDetailProps)
     customer.job_category ||
     customer.job_name ||
     customer.job_risk_grade
-
-  const policyDocUrls = splitUrlList(carInsurance?.가입정보경로)
-  const compareDocUrls = splitUrlList(carInsurance?.비교표경로)
-  const otherImageUrls = splitUrlList(carInsurance?.이미지경로)
 
   return (
     <div className="space-y-6">
@@ -291,124 +284,38 @@ export function CustomerDetail({ customer, familyMembers }: CustomerDetailProps)
           </CardContent>
         </Card>
 
-        {/* 자동차보험 — 전체 정보 노출 */}
+        {/* 자동차보험 — 다중 row 노출 (차량별로 갱신일이 다를 수 있음) */}
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <Car className="h-4 w-4" />
               자동차보험
+              {carInsuranceList.length > 0 && (
+                <Badge variant="outline" className="ml-1">
+                  {carInsuranceList.length}건
+                </Badge>
+              )}
             </CardTitle>
-            {!carInsurance && (
-              <Link href={`/admin/car-insurance/new?customer_id=${customer.id}`}>
-                <Button size="sm" variant="outline">
-                  <Plus className="mr-1 h-3.5 w-3.5" />
-                  자동차보험 등록
-                </Button>
-              </Link>
-            )}
+            <Link href={`/admin/car-insurance/new?customer_id=${customer.id}`}>
+              <Button size="sm" variant="outline">
+                <Plus className="mr-1 h-3.5 w-3.5" />
+                자동차보험 등록
+              </Button>
+            </Link>
           </CardHeader>
           <CardContent className="space-y-4">
-            {!carInsurance ? (
+            {carInsuranceList.length === 0 ? (
               <p className="text-sm text-muted-foreground">등록된 자동차보험 정보가 없습니다.</p>
             ) : (
-              <>
-                {/* 기본 정보: 갱신일/상태/관계인/등록번호 — 2x2 */}
-                <div className="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-4">
-                  <GridCell label="갱신일 (MM-DD)" value={carInsurance.갱신일 ?? "-"} />
-                  <GridCell label="상태" value={carInsurance.상태 ?? "-"} />
-                  <GridCell label="관계인" value={carInsurance.관계인 ?? "-"} />
-                  <GridCell label="등록번호" value={carInsurance.등록번호} />
-                </div>
-
-                {/* 차량 정보 (다중 차량 그대로) */}
-                {carInsurance.차량정보 && (
-                  <div className="space-y-1 border-t pt-3">
-                    <p className="text-xs font-semibold text-muted-foreground">차량 정보</p>
-                    <p className="whitespace-pre-wrap text-sm">{carInsurance.차량정보}</p>
-                  </div>
-                )}
-
-                {/* 계약 완료 — 가입일/만기일 포함 */}
-                {activeContracts.length > 0 && (
-                  <div className="space-y-2 border-t pt-3">
-                    <p className="text-xs font-semibold text-muted-foreground">
-                      계약 완료 ({activeContracts.length}건)
-                    </p>
-                    <div className="space-y-2">
-                      {activeContracts.map((c) => (
-                        <div key={c.id} className="rounded-md border bg-muted/30 p-3">
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-2 md:grid-cols-4">
-                            <GridCell label="가입일" value={c.시작일 ?? "-"} />
-                            <GridCell label="만기일" value={c.만기일 ?? "-"} />
-                            <GridCell label="보험사" value={c.보험사 ?? "-"} />
-                            <GridCell label="채널" value={c.채널 ?? "-"} />
-                            <GridCell label="차량번호" value={c.차량번호 ?? "-"} />
-                            <GridCell label="증권번호" value={c.증권번호 ?? "-"} />
-                            <GridCell label="가입보험료" value={formatWon(c.가입보험료)} />
-                            <GridCell label="계약일" value={c.계약일} />
-                          </div>
-                          {(c.피보험자 || c.계약자 || c.설계자) && (
-                            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 border-t pt-2 text-xs text-muted-foreground">
-                              {c.피보험자 && <span>피보험자: {c.피보험자}</span>}
-                              {c.계약자 && <span>계약자: {c.계약자}</span>}
-                              {c.설계자 && <span>설계자: {c.설계자}</span>}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* 비교 분석 내용 */}
-                {carInsurance.비교내용 && (
-                  <div className="space-y-1 border-t pt-3">
-                    <p className="text-xs font-semibold text-muted-foreground">비교 분석 내용</p>
-                    <p className="whitespace-pre-wrap text-sm">{carInsurance.비교내용}</p>
-                  </div>
-                )}
-
-                {/* 메모 */}
-                {carInsurance.메모 && (
-                  <div className="space-y-1 border-t pt-3">
-                    <p className="text-xs font-semibold text-muted-foreground">메모</p>
-                    <p className="whitespace-pre-wrap text-sm">{carInsurance.메모}</p>
-                  </div>
-                )}
-
-                {/* 첨부 링크 */}
-                {(policyDocUrls.length > 0 || compareDocUrls.length > 0 || otherImageUrls.length > 0) && (
-                  <div className="space-y-2 border-t pt-3">
-                    <p className="text-xs font-semibold text-muted-foreground">첨부 파일</p>
-                    <div className="flex flex-wrap gap-2">
-                      {policyDocUrls.map((url, i) => (
-                        <a key={url} href={url} target="_blank" rel="noreferrer">
-                          <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80">
-                            <ExternalLink className="mr-1 h-3 w-3" />
-                            가입정보 {i + 1}
-                          </Badge>
-                        </a>
-                      ))}
-                      {compareDocUrls.map((url, i) => (
-                        <a key={url} href={url} target="_blank" rel="noreferrer">
-                          <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80">
-                            <ExternalLink className="mr-1 h-3 w-3" />
-                            비교표 {i + 1}
-                          </Badge>
-                        </a>
-                      ))}
-                      {otherImageUrls.map((url, i) => (
-                        <a key={url} href={url} target="_blank" rel="noreferrer">
-                          <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80">
-                            <ExternalLink className="mr-1 h-3 w-3" />
-                            기타 이미지 {i + 1}
-                          </Badge>
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
+              carInsuranceList.map((ci, idx) => (
+                <CarInsuranceRowBlock
+                  key={ci.등록번호}
+                  carInsurance={ci}
+                  index={idx}
+                  total={carInsuranceList.length}
+                  todayStr={todayStr}
+                />
+              ))
             )}
           </CardContent>
         </Card>
@@ -440,6 +347,135 @@ export function CustomerDetail({ customer, familyMembers }: CustomerDetailProps)
         onClose={() => setIsFormOpen(false)}
         onSuccess={() => setRefreshKey((prev) => prev + 1)}
       />
+    </div>
+  )
+}
+
+function CarInsuranceRowBlock({
+  carInsurance,
+  index,
+  total,
+  todayStr,
+}: {
+  carInsurance: CarInsurance
+  index: number
+  total: number
+  todayStr: string
+}) {
+  const activeContracts: CarInsuranceContract[] = (carInsurance.car_insurance_contracts ?? []).filter(
+    (c) => !c.만기일 || c.만기일 >= todayStr,
+  )
+  const policyDocUrls = splitUrlList(carInsurance.가입정보경로)
+  const compareDocUrls = splitUrlList(carInsurance.비교표경로)
+  const otherImageUrls = splitUrlList(carInsurance.이미지경로)
+
+  return (
+    <div className="rounded-lg border bg-background p-3 space-y-3">
+      {total > 1 && (
+        <div className="flex items-center justify-between">
+          <Badge variant="outline" className="text-xs">
+            #{index + 1}
+          </Badge>
+          <Link
+            href={`/admin/car-insurance/edit/${carInsurance.등록번호}`}
+            className="text-xs text-muted-foreground hover:text-primary hover:underline"
+          >
+            정보 수정
+          </Link>
+        </div>
+      )}
+
+      {/* 기본 정보: 갱신일/상태/관계인/등록번호 — 2x2 */}
+      <div className="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-4">
+        <GridCell label="갱신일 (MM-DD)" value={carInsurance.갱신일 ?? "-"} />
+        <GridCell label="상태" value={carInsurance.상태 ?? "-"} />
+        <GridCell label="관계인" value={carInsurance.관계인 ?? "-"} />
+        <GridCell label="등록번호" value={carInsurance.등록번호} />
+      </div>
+
+      {carInsurance.차량정보 && (
+        <div className="space-y-1 border-t pt-3">
+          <p className="text-xs font-semibold text-muted-foreground">차량 정보</p>
+          <p className="whitespace-pre-wrap text-sm">{carInsurance.차량정보}</p>
+        </div>
+      )}
+
+      {activeContracts.length > 0 && (
+        <div className="space-y-2 border-t pt-3">
+          <p className="text-xs font-semibold text-muted-foreground">
+            계약 완료 ({activeContracts.length}건)
+          </p>
+          <div className="space-y-2">
+            {activeContracts.map((c) => (
+              <div key={c.id} className="rounded-md border bg-muted/30 p-3">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 md:grid-cols-4">
+                  <GridCell label="가입일" value={c.시작일 ?? "-"} />
+                  <GridCell label="만기일" value={c.만기일 ?? "-"} />
+                  <GridCell label="보험사" value={c.보험사 ?? "-"} />
+                  <GridCell label="채널" value={c.채널 ?? "-"} />
+                  <GridCell label="차량번호" value={c.차량번호 ?? "-"} />
+                  <GridCell label="차대번호" value={c.차대번호 ?? "-"} />
+                  <GridCell label="증권번호" value={c.증권번호 ?? "-"} />
+                  <GridCell label="가입보험료" value={formatWon(c.가입보험료)} />
+                </div>
+                {(c.피보험자 || c.계약자 || c.설계자) && (
+                  <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 border-t pt-2 text-xs text-muted-foreground">
+                    {c.피보험자 && <span>피보험자: {c.피보험자}</span>}
+                    {c.계약자 && <span>계약자: {c.계약자}</span>}
+                    {c.설계자 && <span>설계자: {c.설계자}</span>}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {carInsurance.비교내용 && (
+        <div className="space-y-1 border-t pt-3">
+          <p className="text-xs font-semibold text-muted-foreground">비교 분석 내용</p>
+          <p className="whitespace-pre-wrap text-sm">{carInsurance.비교내용}</p>
+        </div>
+      )}
+
+      {carInsurance.메모 && (
+        <div className="space-y-1 border-t pt-3">
+          <p className="text-xs font-semibold text-muted-foreground">메모</p>
+          <p className="whitespace-pre-wrap text-sm">{carInsurance.메모}</p>
+        </div>
+      )}
+
+      {(policyDocUrls.length > 0 || compareDocUrls.length > 0 || otherImageUrls.length > 0) && (
+        <div className="space-y-2 border-t pt-3">
+          <p className="text-xs font-semibold text-muted-foreground">첨부 파일</p>
+          <div className="flex flex-wrap gap-2">
+            {policyDocUrls.map((url, i) => (
+              <a key={url} href={url} target="_blank" rel="noreferrer">
+                <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80">
+                  <ExternalLink className="mr-1 h-3 w-3" />
+                  가입정보 {i + 1}
+                </Badge>
+              </a>
+            ))}
+            {compareDocUrls.map((url, i) => (
+              <a key={url} href={url} target="_blank" rel="noreferrer">
+                <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80">
+                  <ExternalLink className="mr-1 h-3 w-3" />
+                  비교표 {i + 1}
+                </Badge>
+              </a>
+            ))}
+            {otherImageUrls.map((url, i) => (
+              <a key={url} href={url} target="_blank" rel="noreferrer">
+                <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80">
+                  <ExternalLink className="mr-1 h-3 w-3" />
+                  기타 이미지 {i + 1}
+                </Badge>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
