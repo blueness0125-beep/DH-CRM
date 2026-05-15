@@ -67,6 +67,16 @@ function buildCarText(items: GeminiExtractItem[]): string {
     .join("\n\n")
 }
 
+// Gemini가 "26-09-01" / "2026-09-01" / "09-01" 등 여러 형식으로 반환할 수 있으므로
+// 항상 마지막 두 그룹(MM-DD)만 추출해서 zero-pad.
+function normalizeRenewal(raw: string): string {
+  const m = raw.match(/(\d{1,2})-(\d{1,2})(?!\d)/g)
+  if (!m || m.length === 0) return raw
+  const last = m[m.length - 1]
+  const [mm, dd] = last.split("-")
+  return `${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`
+}
+
 type EditPrefill = {
   등록번호: string
   customer: Customer
@@ -212,18 +222,23 @@ export function NewCarInsuranceForm({ mode = "create", edit }: Props) {
         toast.warning("이미지에서 추출된 정보가 없습니다")
         return
       }
-      setValue("차량정보", buildCarText(items))
-
       const renewalDates = Array.from(
         new Set(items.map((i) => i.유효일자).filter((v): v is string => !!v)),
       )
-      if (renewalDates.length === 1) {
-        setValue("갱신일", renewalDates[0], { shouldValidate: true })
-      } else if (renewalDates.length > 1) {
+
+      if (renewalDates.length <= 1) {
+        // 단일 만기일(또는 만기일 없음) → 모든 차량 그대로 적용
+        setValue("차량정보", buildCarText(items))
+        if (renewalDates.length === 1) {
+          setValue("갱신일", normalizeRenewal(renewalDates[0]), { shouldValidate: true })
+        }
+        toast.success(`${items.length}건 차량 정보 적용`)
+      } else {
+        // 여러 만기일 → 다이얼로그로 선택 받고, 해당 만기일 차량만 적용
         setPendingItems(items)
         setRenewalDialogOpen(true)
+        toast.info("만기 갱신일을 선택해주세요")
       }
-      toast.success(`${items.length}건 차량 정보 적용`)
     },
     [setValue],
   )
@@ -671,25 +686,37 @@ export function NewCarInsuranceForm({ mode = "create", edit }: Props) {
           <DialogHeader>
             <DialogTitle>만기 갱신일 선택</DialogTitle>
             <DialogDescription>
-              차량별 만기일이 다릅니다. 갱신일로 사용할 날짜를 선택해주세요.
+              차량별 만기일이 다릅니다. 이번에 등록할 갱신일을 선택하세요.
+              선택한 만기일에 해당하는 차량만 차량 정보로 입력됩니다.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
             {Array.from(new Set(pendingItems.map((i) => i.유효일자).filter((v): v is string => !!v))).map(
-              (date) => (
-                <Button
-                  key={date}
-                  type="button"
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={() => {
-                    setValue("갱신일", date, { shouldValidate: true })
-                    setRenewalDialogOpen(false)
-                  }}
-                >
-                  {date}
-                </Button>
-              ),
+              (date) => {
+                const normalized = normalizeRenewal(date)
+                const filtered = pendingItems.filter((i) => i.유효일자 === date)
+                const vehicleSummary = filtered
+                  .map((i) => i.차량번호 || "(차량번호 없음)")
+                  .join(", ")
+                return (
+                  <Button
+                    key={date}
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-start text-left"
+                    onClick={() => {
+                      setValue("갱신일", normalized, { shouldValidate: true })
+                      setValue("차량정보", buildCarText(filtered))
+                      setRenewalDialogOpen(false)
+                    }}
+                  >
+                    <span className="font-semibold text-primary">{normalized}</span>
+                    <span className="ml-2 text-xs text-muted-foreground truncate">
+                      · {vehicleSummary}
+                    </span>
+                  </Button>
+                )
+              },
             )}
           </div>
           <DialogFooter>
