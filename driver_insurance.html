@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>운전자 보험 가입 제안서 - 나를 위한 안전장치</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans KR', sans-serif; }
+        .chart-container { 
+            position: relative; 
+            width: 100%; 
+            max-width: 600px; 
+            margin-left: auto; 
+            margin-right: auto; 
+            height: 350px; 
+            max-height: 400px; 
+        }
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .active-tab { border-bottom: 3px solid #3B82F6; color: #1E40AF; font-weight: 700; }
+        .inactive-tab { color: #6B7280; }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+    </style>
+    <!-- Chosen Palette: "Trust & Safety" - Warm Neutral Background (#F3F4F6) with Medical/Safety Blue (#3B82F6) and Warning Orange (#F59E0B) accents. -->
+    <!-- Application Structure Plan: 
+         1. Hero Section: Emotional hook ("Are you fully protected?").
+         2. Comparative Analysis: Interactive Chart & Table showing the gap between Auto and Driver insurance. 
+            - Goal: Visual proof of the "Coverage Gap".
+         3. Risk Identification: Interactive 12 Major Negligence Grid.
+            - Goal: Educate on specific risks where Auto Insurance fails.
+         4. Scenario Simulation: Tabbed Case Studies (School Zone, Night, Lawyer).
+            - Goal: Storytelling to make risks concrete.
+         5. Solution: The 3 Core Coverages cards.
+         6. Call to Action: Contact details.
+    -->
+    <!-- Visualization & Content Choices:
+         1. Chart.js Stacked Bar: To visualize "Who Pays?" in a serious accident scenario. Compares "With Driver Ins" vs "Without". High impact financial visual.
+         2. Interactive Grid: For 12 Negligence items. Clicking highlights the item and shows a brief warning, keeping the UI clean.
+         3. Tabbed Interface: For Case Studies. Prevents text overload, allows user to explore scenarios at their own pace.
+         4. Comparison Table: Enhanced with hover effects to distinguish Civil vs Criminal responsibility.
+         CONFIRMATION: NO SVG graphics used. NO Mermaid JS used.
+    -->
+</head>
+<body class="bg-gray-50 text-gray-800 antialiased">
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-xl font-bold text-blue-900">🛡️ 운전자 보험 가이드</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="#comparison" class="text-gray-600 hover:text-blue-600 px-3 py-2 text-sm font-medium">차이점 비교</a>
+                    <a href="#risks" class="text-gray-600 hover:text-blue-600 px-3 py-2 text-sm font-medium">12대 중과실</a>
+                    <a href="#scenarios" class="text-gray-600 hover:text-blue-600 px-3 py-2 text-sm font-medium">사고 사례</a>
+                    <a href="#contact" class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition">상담 신청</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+            <h1 class="text-4xl font-extrabold text-gray-900 sm:text-5xl mb-4">
+                자동차 보험만으로는<br><span class="text-blue-600">당신을 지킬 수 없습니다.</span>
+            </h1>
+            <p class="text-xl text-gray-500 max-w-2xl mx-auto mb-8">
+                자동차 보험은 '타인'을 위한 배려이지만, 운전자 보험은 '나'를 지키는 최소한의 안전장치입니다.<br>
+                왜 운전자 보험이 필수인지 지금 바로 확인해보세요.
+            </p>
+            <div class="flex justify-center gap-4">
+                <button onclick="scrollToSection('comparison')" class="bg-blue-100 text-blue-700 px-6 py-3 rounded-lg font-semibold hover:bg-blue-200 transition">
+                    무엇이 다른가요?
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-24">
+
+        <!-- Section 1: Comparison (Auto vs Driver) -->
+        <section id="comparison" class="scroll-mt-24">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-gray-900">자동차 보험 vs 운전자 보험</h2>
+                <p class="mt-4 text-lg text-gray-600">
+                    많은 분들이 헷갈려 하시는 두 보험의 결정적인 차이점은 **"누구를 위한 보상인가"**에 있습니다.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <!-- Interactive Table -->
+                <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
+                    <div class="p-6 bg-blue-900 text-white text-center">
+                        <h3 class="text-xl font-bold">보장 범위 비교</h3>
+                    </div>
+                    <div class="p-6">
+                        <div class="flex flex-col space-y-4">
+                            <div class="flex items-center justify-between border-b pb-4 group hover:bg-gray-50 p-2 rounded transition cursor-pointer" onclick="highlightChart('auto')">
+                                <div class="w-1/3 text-center">
+                                    <span class="block font-bold text-gray-900 text-lg">자동차 보험</span>
+                                    <span class="text-xs text-red-500 font-semibold">(필수/의무)</span>
+                                </div>
+                                <div class="w-1/3 text-center text-gray-400 font-bold text-xl">VS</div>
+                                <div class="w-1/3 text-center">
+                                    <span class="block font-bold text-gray-900 text-lg">운전자 보험</span>
+                                    <span class="text-xs text-blue-500 font-semibold">(선택/방어)</span>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4 text-sm">
+                                <div class="bg-red-50 p-4 rounded-lg">
+                                    <h4 class="font-bold text-red-800 mb-2">🚗 타인을 위한 보험</h4>
+                                    <ul class="space-y-1 text-red-700">
+                                        <li>• 대인/대물 배상</li>
+                                        <li>• 내 차 수리비</li>
+                                        <li>• <strong>민사적 책임</strong> 해결</li>
+                                    </ul>
+                                </div>
+                                <div class="bg-blue-50 p-4 rounded-lg shadow-md ring-2 ring-blue-100">
+                                    <h4 class="font-bold text-blue-800 mb-2">🛡️ 나를 위한 보험</h4>
+                                    <ul class="space-y-1 text-blue-700">
+                                        <li>• <strong>형사 합의금</strong> 지원</li>
+                                        <li>• <strong>벌금</strong> (최대 3천만 원)</li>
+                                        <li>• <strong>변호사 선임비용</strong></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Visualization: Financial Risk Gap -->
+                <div>
+                    <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4 text-center">사고 발생 시 재정 부담 시뮬레이션</h3>
+                        <p class="text-sm text-gray-500 mb-4 text-center">
+                            중과실 사고 발생 시, 운전자 보험 유무에 따른<br><strong>형사적 비용(합의금, 벌금, 변호사비)</strong> 부담 주체 비교
+                        </p>
+                        <!-- Chart Container -->
+                        <div class="chart-container">
+                            <canvas id="riskComparisonChart"></canvas>
+                        </div>
+                        <p class="text-xs text-center text-gray-400 mt-2">* 예시 데이터: 형사합의금 1억, 벌금 2천, 변호사비 1천 가정 시</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: 12 Major Negligence -->
+        <section id="risks" class="bg-gray-100 rounded-3xl p-8 sm:p-12 scroll-mt-24">
+            <div class="text-center mb-10">
+                <span class="bg-red-100 text-red-700 px-4 py-1 rounded-full text-sm font-bold tracking-wide">WARNING</span>
+                <h2 class="text-3xl font-bold text-gray-900 mt-4">12대 중과실 사고</h2>
+                <p class="mt-4 text-gray-600 max-w-2xl mx-auto">
+                    이 12가지 상황에서 사고가 발생하면, 자동차 보험이 있어도 **형사 처벌**을 피할 수 없습니다.<br>
+                    클릭하여 각 항목을 확인해보세요.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" id="negligenceGrid">
+                <!-- JS will populate grid items -->
+            </div>
+
+            <div id="riskDetail" class="mt-8 bg-white p-6 rounded-xl shadow-md hidden fade-in border-l-4 border-red-500">
+                <h4 id="riskTitle" class="text-xl font-bold text-gray-900 mb-2"></h4>
+                <p id="riskDesc" class="text-gray-600"></p>
+                <div class="mt-4 text-sm text-red-600 font-semibold bg-red-50 p-2 rounded inline-block">
+                    ⚠️ 자동차 보험 보상 외 형사 처벌 대상
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Scenarios (Tabs) -->
+        <section id="scenarios" class="scroll-mt-24">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-gray-900">운전자 보험이 절실한 순간</h2>
+                <p class="mt-4 text-gray-600">
+                    "나는 아닐 거야"라고 생각하시나요? 실제 사례를 통해 필요성을 확인하세요.
+                </p>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-xl overflow-hidden max-w-4xl mx-auto">
+                <div class="flex border-b border-gray-200 bg-gray-50 overflow-x-auto">
+                    <button class="tab-btn flex-1 py-4 px-6 text-center font-medium hover:bg-gray-100 focus:outline-none transition active-tab whitespace-nowrap" onclick="switchTab('case1', this)">
+                        🎒 스쿨존 사고
+                    </button>
+                    <button class="tab-btn flex-1 py-4 px-6 text-center font-medium hover:bg-gray-100 focus:outline-none transition inactive-tab whitespace-nowrap" onclick="switchTab('case2', this)">
+                        🌃 밤길 무단횡단
+                    </button>
+                    <button class="tab-btn flex-1 py-4 px-6 text-center font-medium hover:bg-gray-100 focus:outline-none transition inactive-tab whitespace-nowrap" onclick="switchTab('case3', this)">
+                        ⚖️ 억울한 가해자
+                    </button>
+                </div>
+
+                <div class="p-8 min-h-[300px]">
+                    <!-- Case 1 -->
+                    <div id="case1" class="tab-content fade-in block">
+                        <div class="flex flex-col md:flex-row gap-6 items-start">
+                            <div class="flex-shrink-0 bg-yellow-100 p-4 rounded-full">
+                                <span class="text-4xl">🚸</span>
+                            </div>
+                            <div>
+                                <h3 class="text-2xl font-bold text-gray-900 mb-2">"나는 멈췄는데..." 스쿨존 사고 (민식이법)</h3>
+                                <p class="text-gray-600 mb-4 text-lg">
+                                    시속 20km 이하로 서행 중이었으나, 사각지대에서 갑자기 튀어나온 아이와 부딪힌 상황입니다.
+                                </p>
+                                <div class="bg-red-50 p-4 rounded-lg mb-4">
+                                    <strong class="text-red-700 block mb-1">Risk Factor</strong>
+                                    <p class="text-sm text-red-600">민식이법 적용 시 최대 벌금 3,000만 원 또는 징역형 가능.</p>
+                                </div>
+                                <div class="flex items-center text-blue-700 font-semibold bg-blue-50 p-3 rounded-lg">
+                                    <span class="mr-2">🛡️ 솔루션:</span>
+                                    <span>벌금 지원 및 고액의 형사 합의금 지원</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Case 2 -->
+                    <div id="case2" class="tab-content hidden">
+                        <div class="flex flex-col md:flex-row gap-6 items-start">
+                            <div class="flex-shrink-0 bg-gray-800 p-4 rounded-full">
+                                <span class="text-4xl">☔</span>
+                            </div>
+                            <div>
+                                <h3 class="text-2xl font-bold text-gray-900 mb-2">빗길/밤길 "보이지 않는 보행자" 사고</h3>
+                                <p class="text-gray-600 mb-4 text-lg">
+                                    비 오는 밤, 어두운 옷을 입고 무단횡단하는 보행자를 뒤늦게 발견하여 충돌한 상황입니다.
+                                </p>
+                                <div class="bg-red-50 p-4 rounded-lg mb-4">
+                                    <strong class="text-red-700 block mb-1">Risk Factor</strong>
+                                    <p class="text-sm text-red-600">중상해 발생 시 형사 합의 필수. 합의금 수천만 원 ~ 억 단위 발생 가능.</p>
+                                </div>
+                                <div class="flex items-center text-blue-700 font-semibold bg-blue-50 p-3 rounded-lg">
+                                    <span class="mr-2">🛡️ 솔루션:</span>
+                                    <span>'교통사고 처리 지원금'으로 고액 합의금 해결</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Case 3 -->
+                    <div id="case3" class="tab-content hidden">
+                        <div class="flex flex-col md:flex-row gap-6 items-start">
+                            <div class="flex-shrink-0 bg-blue-100 p-4 rounded-full">
+                                <span class="text-4xl">🚓</span>
+                            </div>
+                            <div>
+                                <h3 class="text-2xl font-bold text-gray-900 mb-2">"억울한 가해자" 변호사 선임</h3>
+                                <p class="text-gray-600 mb-4 text-lg">
+                                    상대 과실이 커 보이지만 법적 기준에 의해 내가 '가해자'가 된 상황. 경찰 조사 단계부터 압박이 시작됩니다.
+                                </p>
+                                <div class="bg-red-50 p-4 rounded-lg mb-4">
+                                    <strong class="text-red-700 block mb-1">Risk Factor</strong>
+                                    <p class="text-sm text-red-600">전문적 대응 실패 시 실형 또는 과도한 처벌 위험.</p>
+                                </div>
+                                <div class="flex items-center text-blue-700 font-semibold bg-blue-50 p-3 rounded-lg">
+                                    <span class="mr-2">🛡️ 솔루션:</span>
+                                    <span>경찰 조사 단계부터 '변호사 선임 비용' 지원 (최신 약관)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: 3 Core Benefits -->
+        <section class="scroll-mt-24">
+            <h2 class="text-3xl font-bold text-gray-900 text-center mb-12">운전자 보험의 3대 핵심 방어막</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Card 1 -->
+                <div class="bg-white p-8 rounded-2xl border border-gray-200 card-hover transition duration-300">
+                    <div class="w-14 h-14 bg-green-100 rounded-lg flex items-center justify-center mb-6">
+                        <span class="text-3xl">🤝</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">교통사고 처리 지원금</h3>
+                    <p class="text-gray-600 mb-4">
+                        피해자와의 **형사 합의금**을 지원합니다.<br>
+                        (최대 2억 원 등 가입 금액 상향 추세)
+                    </p>
+                    <div class="w-full bg-gray-200 h-2 rounded-full mt-auto">
+                        <div class="bg-green-500 h-2 rounded-full" style="width: 90%"></div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-2 text-right">경제적 파산 방지</p>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="bg-white p-8 rounded-2xl border border-blue-200 shadow-lg card-hover transition duration-300 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 bg-blue-600 text-white text-xs px-3 py-1 rounded-bl-lg font-bold">BEST</div>
+                    <div class="w-14 h-14 bg-blue-100 rounded-lg flex items-center justify-center mb-6">
+                        <span class="text-3xl">⚖️</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">변호사 선임 비용</h3>
+                    <p class="text-gray-600 mb-4">
+                        경찰 조사, 검찰 기소, 재판 모든 단계에서<br>
+                        **내 편이 되어줄 변호사** 비용을 지원합니다.
+                    </p>
+                    <div class="w-full bg-gray-200 h-2 rounded-full mt-auto">
+                        <div class="bg-blue-600 h-2 rounded-full" style="width: 100%"></div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-2 text-right">초기 대응 필수</p>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="bg-white p-8 rounded-2xl border border-gray-200 card-hover transition duration-300">
+                    <div class="w-14 h-14 bg-yellow-100 rounded-lg flex items-center justify-center mb-6">
+                        <span class="text-3xl">🧾</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">벌금 지원 (대인/대물)</h3>
+                    <p class="text-gray-600 mb-4">
+                        확정 판결을 받은 **벌금액**을 실비로 지원합니다.<br>
+                        (스쿨존 사고 대비 최대 3,000만 원)
+                    </p>
+                    <div class="w-full bg-gray-200 h-2 rounded-full mt-auto">
+                        <div class="bg-yellow-500 h-2 rounded-full" style="width: 80%"></div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-2 text-right">법적 책임 완화</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: Quote & CTA -->
+        <section id="contact" class="bg-blue-900 rounded-3xl p-8 md:p-16 text-center text-white relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+                <div class="absolute right-0 top-0 w-64 h-64 bg-white rounded-full mix-blend-overlay filter blur-3xl transform translate-x-1/2 -translate-y-1/2"></div>
+                <div class="absolute left-0 bottom-0 w-64 h-64 bg-blue-400 rounded-full mix-blend-overlay filter blur-3xl transform -translate-x-1/2 translate-y-1/2"></div>
+            </div>
+            
+            <div class="relative z-10 max-w-3xl mx-auto">
+                <p class="text-blue-200 font-serif italic text-lg md:text-xl mb-6">
+                    "운전 실력이 아무리 좋아도, 타인의 실수까지 통제할 수는 없습니다.<br>
+                    월 1~2만 원의 커피 값으로 인생의 큰 위기를 막으십시오."
+                </p>
+                <h2 class="text-3xl md:text-4xl font-bold mb-8">내 보험은 안전한가요?</h2>
+                <div class="bg-white/10 backdrop-blur-md p-6 rounded-xl border border-white/20 inline-block w-full max-w-md">
+                    <h3 class="text-xl font-semibold mb-4">무료 상담 및 보장 분석 신청</h3>
+                    <div class="space-y-3 text-left">
+                        <div class="flex items-center">
+                            <span class="w-8 h-8 rounded-full bg-white text-blue-900 flex items-center justify-center mr-3 font-bold">👤</span>
+                            <span>[설계사 이름]</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="w-8 h-8 rounded-full bg-white text-blue-900 flex items-center justify-center mr-3 font-bold">📞</span>
+                            <span>[연락처 입력]</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="w-8 h-8 rounded-full bg-white text-blue-900 flex items-center justify-center mr-3 font-bold">💬</span>
+                            <span>[카카오톡 아이디]</span>
+                        </div>
+                    </div>
+                    <button class="mt-6 w-full bg-white text-blue-900 font-bold py-3 rounded-lg hover:bg-blue-50 transition shadow-lg transform active:scale-95" onclick="alert('설계사에게 연락하여 상담을 예약합니다.')">
+                        상담 예약하기
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-gray-800 text-gray-400 py-8 text-center text-sm">
+        <div class="max-w-7xl mx-auto px-4">
+            <p>&copy; 2024 안전한 카 라이프 보험 가이드. All rights reserved.</p>
+            <p class="mt-2">본 자료는 고객 안내용이며, 실제 가입 시 상품 설명서와 약관을 반드시 참조하시기 바랍니다.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // 1. Data Store
+        const negligenceData = [
+            "신호위반", "중앙선 침범", "제한속도 20km 초과", "앞지르기 위반",
+            "철길건널목 위반", "횡단보도 위반", "무면허 운전", "음주 운전",
+            "보도 침범", "승객 추락방지 위반", "스쿨존 의무 위반", "화물 고정 위반"
+        ];
+
+        // 2. Chart.js Implementation
+        // Goal: Visualize the financial burden shift.
+        // Stacked bar chart: "My Cost" vs "Insurance Coverage"
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('riskComparisonChart').getContext('2d');
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['자동차 보험만 가입 시', '운전자 보험 추가 가입 시'],
+                    datasets: [
+                        {
+                            label: '본인 부담금 (형사책임)',
+                            data: [130, 0], // Approx 130 Million KRW (100 Settlement + 20 Fine + 10 Lawyer)
+                            backgroundColor: 'rgba(239, 68, 68, 0.8)', // Red
+                            borderRadius: 6,
+                        },
+                        {
+                            label: '운전자 보험 보장금',
+                            data: [0, 130],
+                            backgroundColor: 'rgba(59, 130, 246, 0.8)', // Blue
+                            borderRadius: 6,
+                        },
+                        {
+                            label: '자동차 보험 보장금 (민사)',
+                            data: [100, 100], // Constant civil liability coverage
+                            backgroundColor: 'rgba(16, 185, 129, 0.5)', // Green
+                            borderRadius: 6,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { stacked: true },
+                        y: { 
+                            stacked: true,
+                            title: { display: true, text: '비용 (단위: 백만 원, 예시)' },
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                afterBody: function(context) {
+                                    if (context[0].dataIndex === 0) {
+                                        return '\n⚠️ 형사 합의금, 벌금, 변호사비는\n오로지 본인의 사비로 해결해야 합니다.';
+                                    } else {
+                                        return '\n✅ 운전자 보험이 형사적 비용을\n실손 지원하여 경제적 위험을 막습니다.';
+                                    }
+                                }
+                            }
+                        },
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+
+            // Populate Grid
+            const gridContainer = document.getElementById('negligenceGrid');
+            negligenceData.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = `bg-white p-4 rounded-lg shadow cursor-pointer hover:bg-red-50 hover:shadow-md transition text-center border border-gray-100 flex items-center justify-center h-24 relative overflow-hidden group`;
+                div.innerHTML = `
+                    <span class="font-bold text-gray-700 group-hover:text-red-600 transition z-10 break-keep">${index + 1}. ${item}</span>
+                    <div class="absolute inset-0 bg-red-100 transform scale-0 group-hover:scale-100 transition duration-300 rounded-lg -z-0 origin-center opacity-30"></div>
+                `;
+                div.onclick = () => showRiskDetail(item);
+                gridContainer.appendChild(div);
+            });
+        });
+
+        // 3. Interactive Functions
+        function scrollToSection(id) {
+            document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function switchTab(caseId, btn) {
+            // Hide all content
+            document.querySelectorAll('.tab-content').forEach(el => {
+                el.classList.add('hidden');
+                el.classList.remove('block', 'fade-in');
+            });
+            
+            // Show selected content
+            const content = document.getElementById(caseId);
+            content.classList.remove('hidden');
+            content.classList.add('block', 'fade-in');
+
+            // Reset buttons
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.classList.remove('active-tab', 'text-blue-800');
+                b.classList.add('inactive-tab');
+            });
+
+            // Activate button
+            btn.classList.remove('inactive-tab');
+            btn.classList.add('active-tab');
+        }
+
+        function showRiskDetail(title) {
+            const detailBox = document.getElementById('riskDetail');
+            const titleEl = document.getElementById('riskTitle');
+            const descEl = document.getElementById('riskDesc');
+
+            titleEl.textContent = `🚨 ${title}`;
+            descEl.textContent = `"${title}" 사고는 12대 중과실에 해당합니다. 피해자와 합의하더라도 형사 처벌(5년 이하 금고 또는 2천만 원 이하 벌금 등)의 대상이 되므로, 운전자 보험의 벌금 및 변호사 선임 비용 특약이 반드시 필요합니다.`;
+            
+            detailBox.classList.remove('hidden');
+            detailBox.classList.add('fade-in');
+            
+            // Highlight effect on box
+            detailBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function highlightChart(type) {
+            // Optional: Add interactivity to scroll to chart or pulse it
+            const chartArea = document.querySelector('.chart-container');
+            chartArea.classList.add('ring-4', 'ring-blue-100', 'rounded-lg', 'transition');
+            setTimeout(() => chartArea.classList.remove('ring-4', 'ring-blue-100'), 1000);
+        }
+
+    </script>
+</body>
+</html>
