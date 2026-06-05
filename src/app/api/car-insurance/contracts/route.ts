@@ -17,8 +17,8 @@ export async function GET(req: NextRequest) {
     const filter = parseContractFilter(searchParams)
     const items = await fetchFilteredContracts(supabase, filter)
 
-    // 화면 목록: 시작일 내림차순(최근 계약완료 건부터)
-    items.sort((a, b) => (b.시작일 ?? "").localeCompare(a.시작일 ?? ""))
+    // 화면 목록: 계약일 내림차순(최근 계약완료 건부터)
+    items.sort((a, b) => (b.계약일 ?? "").localeCompare(a.계약일 ?? ""))
 
     return NextResponse.json({ data: items, label: filter.label })
   } catch (e) {

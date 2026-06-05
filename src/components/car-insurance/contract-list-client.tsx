@@ -181,7 +181,7 @@ export function ContractListClient() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <span>계약 목록</span>
-            <span className="text-sm font-normal text-muted-foreground">({label}, 시작일 기준)</span>
+            <span className="text-sm font-normal text-muted-foreground">({label}, 계약일 기준)</span>
             {!loading && (
               <Badge variant="outline" className="ml-auto">
                 {data.length}건

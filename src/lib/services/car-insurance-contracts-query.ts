@@ -20,7 +20,7 @@ export type ContractListItem = {
   customer_id: string | null
 }
 
-/** 조회 기간 (시작일 기준). to 가 null 이면 from 이후 전체(최근 N일 모드). */
+/** 조회 기간 (계약일 기준). to 가 null 이면 from 이후 전체(최근 N일 모드). */
 export type ContractFilter = {
   from: string | null
   to: string | null
@@ -45,10 +45,10 @@ function toLocalDateStr(d: Date): string {
 }
 
 /**
- * 쿼리 파라미터 → 조회 기간 변환 (모두 "시작일" 기준).
+ * 쿼리 파라미터 → 조회 기간 변환 (모두 "계약일" 기준).
  * - month=YYYY-MM   → 해당 월 1일 ~ 말일
  * - from & to       → 지정 기간
- * - (없음)          → 기본값: 최근 45일 (시작일 >= 오늘-44일)
+ * - (없음)          → 기본값: 최근 45일 (계약일 >= 오늘-44일)
  */
 export function parseContractFilter(searchParams: URLSearchParams): ContractFilter {
   const month = searchParams.get("month")
@@ -77,7 +77,7 @@ export function parseContractFilter(searchParams: URLSearchParams): ContractFilt
   return { from: toLocalDateStr(start), to: null, label: "최근 45일", tag: "최근45일" }
 }
 
-/** 시작일 기준 기간 필터로 계약 목록 조회 (정렬은 호출 측 책임). */
+/** 계약일 기준 기간 필터로 계약 목록 조회 (정렬은 호출 측 책임). */
 export async function fetchFilteredContracts(
   supabase: SupabaseClient,
   filter: ContractFilter,
@@ -88,9 +88,9 @@ export async function fetchFilteredContracts(
       "*, car_insurance_data ( 등록번호, 고객명, customer_id, customers ( name ) )",
     )
 
-  // 시작일은 "YYYY-MM-DD" 텍스트 → 사전식 비교가 곧 날짜 비교
-  if (filter.from) query = query.gte("시작일", filter.from)
-  if (filter.to) query = query.lte("시작일", filter.to)
+  // 계약일은 "YYYY-MM-DD" 텍스트 → 사전식 비교가 곧 날짜 비교
+  if (filter.from) query = query.gte("계약일", filter.from)
+  if (filter.to) query = query.lte("계약일", filter.to)
 
   const { data, error } = await query
   if (error) throw error
