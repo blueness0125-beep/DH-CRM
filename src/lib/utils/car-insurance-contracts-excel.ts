@@ -12,9 +12,10 @@ export type ContractExcelRow = {
   만기일: string | null
   피보험자: string | null
   계약자: string | null
+  설계자: string | null
 }
 
-/** F열(특이사항) 고정 접두어 — 요구사항: 항상 "송상훈" + 계약자명 */
+/** F열(특이사항) 고정 접두어 — 요구사항: 항상 "송상훈" + 설계자명 */
 const SPECIAL_NOTE_PREFIX = "송상훈"
 
 function toDate(s: string | null): Date | null {
@@ -76,7 +77,7 @@ export async function exportContractsToExcel(
       r.채널 ?? "", // C
       r.가입보험료 ?? null, // D
       r.차량번호 ?? "", // E (없으면 빈칸)
-      `${SPECIAL_NOTE_PREFIX} / ${r.계약자 ?? ""}`, // F
+      `${SPECIAL_NOTE_PREFIX} / ${r.설계자 ?? ""}`, // F (송상훈 / 설계자)
       r.증권번호 ?? "", // G
       toDate(r.시작일), // H
       toDate(r.만기일), // I
