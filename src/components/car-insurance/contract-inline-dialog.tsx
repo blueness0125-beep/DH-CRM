@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-const 보험사_목록 = ["삼성화재", "KB손해보험", "DB손해보험", "현대해상", "한화손해보험"]
+const 보험사_목록 = ["삼성화재", "KB손해보험", "DB손해보험", "현대해상", "한화손해보험", "하나손해보험"]
 const 채널_목록 = ["씨엠", "다이렉트", "TM라인", "오프라인"]
 const 설계자_목록 = ["송상훈", "이중경"]
 
