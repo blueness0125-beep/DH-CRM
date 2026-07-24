@@ -6,6 +6,7 @@ export type RenewalExportRow = {
   성명: string
   생년월일: string | null
   주민번호뒷자리: string | null
+  isCorporate?: boolean
   fullRenewalDate: string
 }
 
@@ -45,11 +46,15 @@ export async function exportRenewalsToExcel(
   headerRow.height = 22
 
   rows.forEach((r, idx) => {
+    const birthVal = r.isCorporate
+      ? (r.생년월일 ?? "")
+      : (formatDate(r.생년월일) || r.생년월일 || "")
+
     const row = sheet.addRow({
       seq: idx + 1,
       renewal: r.fullRenewalDate || r.갱신일 || "",
       name: r.성명,
-      birth: formatDate(r.생년월일),
+      birth: birthVal,
       ssn: r.주민번호뒷자리 ?? "",
     })
 

@@ -14,7 +14,13 @@ type Row = {
   갱신일: string | null
   생년월일: string | null
   주민번호뒷자리: string | null
-  customers: { name: string; birth_date: string | null; ssn_back: string | null } | null
+  customers: {
+    name: string
+    birth_date: string | null
+    ssn_back: string | null
+    customer_type: "individual" | "corporate" | null
+    business_number: string | null
+  } | null
 }
 
 export async function GET(req: NextRequest) {
@@ -30,22 +36,39 @@ export async function GET(req: NextRequest) {
 
     const { data: raw, error } = await supabase
       .from("car_insurance_data")
-      .select("고객명, 갱신일, 생년월일, 주민번호뒷자리, customers ( name, birth_date, ssn_back )")
+      .select(
+        "고객명, 갱신일, 생년월일, 주민번호뒷자리, customers ( name, birth_date, ssn_back, customer_type, business_number )"
+      )
 
     if (error) throw error
 
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    let items: RenewalExportRow[] = ((raw as unknown as Row[]) ?? []).map((item) => ({
-      성명: item.customers?.name || item.고객명 || "",
-      갱신일: item.갱신일,
-      생년월일: item.customers?.birth_date || item.생년월일,
-      주민번호뒷자리: item.customers?.ssn_back || item.주민번호뒷자리,
-      fullRenewalDate: item.갱신일?.trim()
-        ? getNextRenewalDate(item.갱신일, today).toISOString().split("T")[0]
-        : "",
-    }))
+    let items: RenewalExportRow[] = ((raw as unknown as Row[]) ?? []).map((item) => {
+      const isBizNoPattern = /^\d{3}-\d{2}-\d{5}$/.test((item.customers?.business_number || item.생년월일 || "").trim())
+      const isCorporate =
+        item.customers?.customer_type === "corporate" ||
+        !!item.customers?.business_number ||
+        isBizNoPattern
+
+      const birthVal = isCorporate
+        ? (item.customers?.business_number || item.생년월일 || "")
+        : (item.customers?.birth_date || item.생년월일 || "")
+
+      const ssnVal = isCorporate ? "" : (item.customers?.ssn_back || item.주민번호뒷자리 || "")
+
+      return {
+        성명: item.customers?.name || item.고객명 || "",
+        갱신일: item.갱신일,
+        생년월일: birthVal,
+        주민번호뒷자리: ssnVal,
+        isCorporate,
+        fullRenewalDate: item.갱신일?.trim()
+          ? getNextRenewalDate(item.갱신일, today).toISOString().split("T")[0]
+          : "",
+      }
+    })
 
     let sheetName = "자동차보험 갱신"
     if (filter === "upcoming45") {
