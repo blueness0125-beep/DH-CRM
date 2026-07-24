@@ -79,7 +79,7 @@ export class CarInsuranceRegistrationRepository {
   async findByRegistrationId(등록번호: string) {
     const { data, error } = await this.supabase
       .from("car_insurance_data")
-      .select("*, customers ( id, name, birth_date, ssn_back, phone, gender ), car_insurance_contracts(*)")
+      .select("*, customers ( * ), car_insurance_contracts(*)")
       .eq("등록번호", 등록번호)
       .single()
     if (error) throw error

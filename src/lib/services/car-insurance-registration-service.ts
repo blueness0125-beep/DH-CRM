@@ -45,7 +45,7 @@ export class CarInsuranceRegistrationService {
   async register(form: CarInsuranceRegistration) {
     const { data: customer, error: customerError } = await this.supabase
       .from("customers")
-      .select("id, name, phone, birth_date, ssn_back")
+      .select("*")
       .eq("id", form.customer_id)
       .single()
 
@@ -72,6 +72,7 @@ export class CarInsuranceRegistrationService {
     void _r
     void _v
     void _s
+    const isCorporate = customer.customer_type === "corporate" || !!customer.business_number
     const carRecord = await this.carRepo.insertCarInsurance({
       ...rest,
       갱신일,
@@ -80,8 +81,8 @@ export class CarInsuranceRegistrationService {
       등록번호,
       customer_id,
       고객명: customer.name,
-      생년월일: customer.birth_date ?? null,
-      주민번호뒷자리: customer.ssn_back ?? null,
+      생년월일: isCorporate ? (customer.business_number ?? null) : (customer.birth_date ?? null),
+      주민번호뒷자리: isCorporate ? null : (customer.ssn_back ?? null),
       연락처: customer.phone ?? null,
     })
 

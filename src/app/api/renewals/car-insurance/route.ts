@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
 
     const { data: raw, error } = await supabase
       .from("car_insurance_data")
-      .select("*, customers ( id, name, phone ), car_insurance_contracts ( * )")
+      .select("*, customers ( * ), car_insurance_contracts ( * )")
 
     if (error) throw error
 
