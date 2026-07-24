@@ -92,24 +92,40 @@ export function CustomerSearchDialog({
             {!loading && query && results.length === 0 && (
               <p className="py-4 text-center text-sm text-muted-foreground">검색 결과가 없습니다</p>
             )}
-            {results.map((customer) => (
-              <button
-                key={customer.id}
-                onClick={() => handleSelect(customer)}
-                className="flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted"
-              >
-                <div>
-                  <p className="font-medium">{customer.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDate(customer.birth_date)}
-                    {calculateAge(customer.birth_date) != null && ` (${calculateAge(customer.birth_date)}세)`}
-                  </p>
-                </div>
-                <span className="text-xs text-muted-foreground">
-                  {formatPhone(customer.phone)}
-                </span>
-              </button>
-            ))}
+            {results.map((customer) => {
+              const isCorporate = customer.customer_type === "corporate" || !!customer.business_number
+              return (
+                <button
+                  key={customer.id}
+                  onClick={() => handleSelect(customer)}
+                  className="flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted"
+                >
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-medium">{customer.name}</p>
+                      {isCorporate && (
+                        <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                          법인
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {isCorporate ? (
+                        customer.business_number ? `사업자번호: ${customer.business_number}` : "사업자번호 미등록"
+                      ) : (
+                        <>
+                          {formatDate(customer.birth_date)}
+                          {calculateAge(customer.birth_date) != null && ` (${calculateAge(customer.birth_date)}세)`}
+                        </>
+                      )}
+                    </p>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {formatPhone(customer.phone)}
+                  </span>
+                </button>
+              )
+            })}
           </div>
         </div>
       </DialogContent>

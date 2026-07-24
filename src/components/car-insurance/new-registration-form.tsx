@@ -474,13 +474,32 @@ export function NewCarInsuranceForm({ mode = "create", edit }: Props) {
               <div className="flex items-center gap-3">
                 <UserCheck className="h-5 w-5 text-primary" />
                 <div>
-                  <p className="text-base font-bold">{customer.name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-base font-bold">{customer.name}</p>
+                    {(customer.customer_type === "corporate" || !!customer.business_number) && (
+                      <Badge variant="outline" className="text-xs">
+                        법인
+                      </Badge>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    {formatDate(customer.birth_date)}
-                    {calculateAge(customer.birth_date) != null && ` (${calculateAge(customer.birth_date)}세)`}
-                    {customer.ssn_back && ` · ${customer.ssn_back}`}
-                    {customer.gender && ` · ${formatGender(customer.gender)}`}
-                    {customer.phone && ` · ${formatPhone(customer.phone)}`}
+                    {customer.customer_type === "corporate" || !!customer.business_number ? (
+                      <>
+                        {customer.business_number
+                          ? `사업자등록번호: ${customer.business_number}`
+                          : "사업자등록번호 미등록"}
+                        {customer.phone && ` · ${formatPhone(customer.phone)}`}
+                      </>
+                    ) : (
+                      <>
+                        {formatDate(customer.birth_date)}
+                        {calculateAge(customer.birth_date) != null &&
+                          ` (${calculateAge(customer.birth_date)}세)`}
+                        {customer.ssn_back && ` · ${customer.ssn_back}`}
+                        {customer.gender && ` · ${formatGender(customer.gender)}`}
+                        {customer.phone && ` · ${formatPhone(customer.phone)}`}
+                      </>
+                    )}
                   </p>
                 </div>
               </div>

@@ -144,10 +144,23 @@ export function GlobalSearch() {
                         <User className="h-4 w-4 text-primary" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium">{c.name}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-medium">{c.name}</p>
+                          {(c.customer_type === "corporate" || !!c.business_number) && (
+                            <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                              법인
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground">
-                          {formatDate(c.birth_date)}
-                          {calculateAge(c.birth_date) != null && ` · ${calculateAge(c.birth_date)}세`}
+                          {c.customer_type === "corporate" || !!c.business_number ? (
+                            c.business_number ? `사업자번호: ${c.business_number}` : "사업자번호 미등록"
+                          ) : (
+                            <>
+                              {formatDate(c.birth_date)}
+                              {calculateAge(c.birth_date) != null && ` · ${calculateAge(c.birth_date)}세`}
+                            </>
+                          )}
                           {c.phone && ` · ${formatPhone(c.phone)}`}
                         </p>
                       </div>
