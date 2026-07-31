@@ -208,11 +208,13 @@ export function CustomerForm({ customer, mode, familyMembers = [] }: CustomerFor
   function handleHomeAddress(result: AddressResult) {
     setValue("home_zonecode", result.zonecode)
     setValue("home_address", result.address)
+    setValue("home_address_detail", result.extraAddress)
   }
 
   function handleWorkAddress(result: AddressResult) {
     setValue("work_zonecode", result.zonecode)
     setValue("work_address", result.address)
+    setValue("work_address_detail", result.extraAddress)
   }
 
   function handleOccupationSelect(occupation: Occupation) {

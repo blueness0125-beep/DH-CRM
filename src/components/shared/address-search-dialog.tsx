@@ -26,12 +26,16 @@ type DaumPostcodeResult = {
   autoRoadAddress: string
   autoJibunAddress: string
   userSelectedType: "R" | "J"
+  bname: string
+  bname1: string
+  bname2: string
 }
 
 export type AddressResult = {
   zonecode: string
   address: string
   buildingName: string
+  extraAddress: string
 }
 
 type AddressSearchButtonProps = {
@@ -59,11 +63,33 @@ export function AddressSearchButton({ onSelect, label = "주소 검색" }: Addre
       await loadDaumPostcodeScript()
       new window.daum.Postcode({
         oncomplete(data: DaumPostcodeResult) {
-          const address = data.userSelectedType === "R" ? data.roadAddress : data.jibunAddress
+          const address =
+            data.userSelectedType === "R"
+              ? data.roadAddress || data.autoRoadAddress || data.jibunAddress
+              : data.jibunAddress || data.autoJibunAddress || data.roadAddress
+
+          let extraAddress = ""
+          if (data.userSelectedType === "R") {
+            if (data.bname !== "" && /[동|로|가]$/g.test(data.bname)) {
+              extraAddress += data.bname
+            }
+            if (data.buildingName !== "") {
+              extraAddress += extraAddress !== "" ? `, ${data.buildingName}` : data.buildingName
+            }
+            if (extraAddress !== "") {
+              extraAddress = `(${extraAddress})`
+            }
+          } else {
+            if (data.buildingName !== "") {
+              extraAddress = `(${data.buildingName})`
+            }
+          }
+
           onSelect({
             zonecode: data.zonecode,
             address,
             buildingName: data.buildingName,
+            extraAddress,
           })
         },
       }).open()
