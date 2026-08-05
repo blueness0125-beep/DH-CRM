@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Button } from "@/components/ui/button"
@@ -58,6 +58,13 @@ type CustomerFormProps = {
 
 export function CustomerForm({ customer, mode, familyMembers = [] }: CustomerFormProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const prefillCarInsuranceId = searchParams.get("car_insurance_id")
+  const prefillName = searchParams.get("name")
+  const prefillBirthDate = searchParams.get("birth_date")
+  const prefillSsnBack = searchParams.get("ssn_back")
+  const prefillPhone = searchParams.get("phone")
+
   const [saving, setSaving] = useState(false)
   const [occupationSearchOpen, setOccupationSearchOpen] = useState(false)
 
@@ -112,8 +119,23 @@ export function CustomerForm({ customer, mode, familyMembers = [] }: CustomerFor
           bank_holder: customer.bank_holder ?? "",
           memo: customer.memo ?? "",
         }
-      : { name: "", customer_type: "individual" },
+      : {
+          name: prefillName ?? "",
+          birth_date: prefillBirthDate ?? "",
+          ssn_back: prefillSsnBack ?? "",
+          phone: prefillPhone ?? "",
+          customer_type: "individual",
+        },
   })
+
+  useEffect(() => {
+    if (mode === "create") {
+      if (prefillName) setValue("name", prefillName)
+      if (prefillBirthDate) setValue("birth_date", prefillBirthDate)
+      if (prefillSsnBack) setValue("ssn_back", prefillSsnBack)
+      if (prefillPhone) setValue("phone", prefillPhone)
+    }
+  }, [mode, prefillName, prefillBirthDate, prefillSsnBack, prefillPhone, setValue])
 
   // 생년월일/사업자등록번호 입력값 감시해서 법인/개인 모드 자동 판정
   const birthOrBizValue = useWatch({ control, name: "birth_date" }) ?? ""
@@ -127,9 +149,13 @@ export function CustomerForm({ customer, mode, familyMembers = [] }: CustomerFor
       const method = mode === "create" ? "POST" : "PUT"
 
       // 입력된 값이 사업자등록번호 형식이면 법인으로 저장
+      const baseData = {
+        ...data,
+        car_insurance_id: prefillCarInsuranceId ?? undefined,
+      }
       const payload = BIZ_NUMBER_RE.test(data.birth_date ?? "")
         ? {
-            ...data,
+            ...baseData,
             customer_type: "corporate" as const,
             business_number: data.birth_date,
             birth_date: null,
@@ -139,7 +165,7 @@ export function CustomerForm({ customer, mode, familyMembers = [] }: CustomerFor
             job_name: null,
             job_risk_grade: null,
           }
-        : { ...data, customer_type: "individual" as const, business_number: null }
+        : { ...baseData, customer_type: "individual" as const, business_number: null }
 
       const res = await fetch(url, {
         method,
@@ -192,8 +218,18 @@ export function CustomerForm({ customer, mode, familyMembers = [] }: CustomerFor
           )
         }
 
-        toast.success(mode === "create" ? "고객이 등록되었습니다" : "고객 정보가 수정되었습니다")
-        router.push(`/admin/customers/${newCustomerId}`)
+        toast.success(
+          mode === "create"
+            ? prefillCarInsuranceId
+              ? "고객 등록 및 자동차보험 연동 완료!"
+              : "고객이 등록되었습니다"
+            : "고객 정보가 수정되었습니다"
+        )
+        if (mode === "create" && prefillCarInsuranceId) {
+          router.push(`/admin/car-insurance/edit/${prefillCarInsuranceId}`)
+        } else {
+          router.push(`/admin/customers/${newCustomerId}`)
+        }
         router.refresh()
       } else {
         toast.error("저장에 실패했습니다")
@@ -233,6 +269,22 @@ export function CustomerForm({ customer, mode, familyMembers = [] }: CustomerFor
           {mode === "create" ? "고객 등록" : "고객 수정"}
         </h1>
       </div>
+
+      {prefillCarInsuranceId && (
+        <Card className="border-blue-300 bg-blue-50/50 dark:bg-blue-950/20">
+          <CardContent className="flex items-center gap-3 pt-4 text-sm text-blue-900 dark:text-blue-200">
+            <UserPlus className="h-5 w-5 text-blue-600 flex-shrink-0" />
+            <div>
+              <span className="font-bold">
+                자동차보험(등록번호: {prefillCarInsuranceId}) 정보에서 불러온 고객 데이터입니다.
+              </span>
+              <p className="mt-0.5 text-xs text-blue-700 dark:text-blue-300">
+                고객 등록 완료 시 해당 자동차보험 정보와 자동으로 연결되어 관리하실 수 있습니다.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Basic Info */}

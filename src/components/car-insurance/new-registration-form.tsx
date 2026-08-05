@@ -407,7 +407,11 @@ export function NewCarInsuranceForm({ mode = "create", edit }: Props) {
           return
         }
         toast.success("자동차보험 정보 수정 완료")
-        router.push(`/admin/customers/${edit!.customer.id}`)
+        if (edit!.customer.id) {
+          router.push(`/admin/customers/${edit!.customer.id}`)
+        } else {
+          router.push("/admin/renewals/car-insurance")
+        }
       } else {
         const payload = { ...sharedPayload, contracts }
         const res = await fetch("/api/car-insurance/register", {

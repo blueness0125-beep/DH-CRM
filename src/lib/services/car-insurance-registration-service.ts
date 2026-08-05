@@ -124,4 +124,8 @@ export class CarInsuranceRegistrationService {
     }
     return this.carRepo.updateCarInsurance(등록번호, cleaned)
   }
+
+  async linkCustomer(등록번호: string, customerId: string) {
+    return this.carRepo.linkCustomer(등록번호, customerId)
+  }
 }

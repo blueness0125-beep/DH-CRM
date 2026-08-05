@@ -99,4 +99,37 @@ export class CarInsuranceRegistrationRepository {
     if (error) throw error
     return data
   }
+
+  async linkCustomer(
+    등록번호: string,
+    customerId: string,
+  ) {
+    const { data: customer, error: custErr } = await this.supabase
+      .from("customers")
+      .select("*")
+      .eq("id", customerId)
+      .single()
+
+    if (custErr || !customer) {
+      throw new Error("고객을 찾을 수 없습니다.")
+    }
+
+    const isCorporate = customer.customer_type === "corporate" || !!customer.business_number
+
+    const { data, error } = await this.supabase
+      .from("car_insurance_data")
+      .update({
+        customer_id: customer.id,
+        고객명: customer.name,
+        생년월일: isCorporate ? (customer.business_number ?? null) : (customer.birth_date ?? null),
+        주민번호뒷자리: isCorporate ? null : (customer.ssn_back ?? null),
+        연락처: customer.phone ?? null,
+      })
+      .eq("등록번호", 등록번호)
+      .select("*, customers(*)")
+      .single()
+
+    if (error) throw error
+    return data
+  }
 }

@@ -4,6 +4,7 @@ import { Loader2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import { CarInsuranceRegistrationService } from "@/lib/services/car-insurance-registration-service"
 import { NewCarInsuranceForm } from "@/components/car-insurance/new-registration-form"
+import { UnlinkedCarInsuranceNotice } from "@/components/car-insurance/unlinked-notice"
 import type { Customer } from "@/types/customer"
 
 export const metadata = {
@@ -24,8 +25,12 @@ export default async function EditCarInsurancePage({ params }: Params) {
     notFound()
   }
 
-  if (!raw || !raw.customers) {
+  if (!raw) {
     notFound()
+  }
+
+  if (!raw.customers) {
+    return <UnlinkedCarInsuranceNotice raw={raw} />
   }
 
   const edit = {

@@ -47,7 +47,18 @@ export async function POST(request: NextRequest) {
     }
 
     const service = new CustomerService(supabase)
-    const customer = await service.createCustomer(parsed.data, user.id)
+    const { car_insurance_id, ...customerData } = parsed.data
+    const customer = await service.createCustomer(customerData, user.id)
+
+    if (car_insurance_id && customer?.id) {
+      try {
+        const { CarInsuranceRegistrationService } = await import("@/lib/services/car-insurance-registration-service")
+        const carService = new CarInsuranceRegistrationService(supabase)
+        await carService.linkCustomer(car_insurance_id, customer.id)
+      } catch (linkErr) {
+        console.error("Failed to auto link car insurance:", linkErr)
+      }
+    }
 
     return NextResponse.json({ data: customer }, { status: 201 })
   } catch (error) {

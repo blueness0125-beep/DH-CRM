@@ -26,6 +26,7 @@ export const customerCreateSchema = z.object({
   memo: z.string().nullable().optional(),
   family_group_id: z.string().uuid().nullable().optional(),
   is_primary: z.boolean().optional(),
+  car_insurance_id: z.string().optional(),
 })
 
 export const customerUpdateSchema = customerCreateSchema.partial()
